@@ -13,8 +13,8 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/collinesfilms/shortify/internal/auth"
-	"github.com/collinesfilms/shortify/internal/store"
+	"github.com/collinesfilms/wend/internal/auth"
+	"github.com/collinesfilms/wend/internal/store"
 )
 
 // Ambiguous characters are left out so a code read off a projector and typed
@@ -145,6 +145,10 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 		"user":     u,
 		"domains":  domains,
 		"settings": s.settings(r),
+		"brand": map[string]string{
+			"name":    s.cfg.BrandName,
+			"tagline": s.cfg.Tagline,
+		},
 	})
 }
 
@@ -241,6 +245,29 @@ func (s *Server) handleCheckSlug(w http.ResponseWriter, r *http.Request) {
 		}
 		writeJSON(w, http.StatusOK, map[string]any{"available": available, "reason": reason})
 	}
+}
+
+// handleFindByDest answers "have I already shortened this?" so the interface
+// can offer the existing link instead of quietly making a second one.
+func (s *Server) handleFindByDest(w http.ResponseWriter, r *http.Request) {
+	u, _ := auth.UserFrom(r.Context())
+	dest, ok := validDest(r.URL.Query().Get("dest"))
+	if !ok {
+		writeJSON(w, http.StatusOK, map[string]any{"link": nil})
+		return
+	}
+	links, err := s.st.List(r.Context(), u.ID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "could not look that up")
+		return
+	}
+	for i := range links {
+		if links[i].Dest == dest && !links[i].Expired && !links[i].Disabled {
+			writeJSON(w, http.StatusOK, map[string]any{"link": links[i]})
+			return
+		}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"link": nil})
 }
 
 type createLinkRequest struct {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { api, ApiError, type Domain, type Link, type Settings, type User } from './api'
+import { api, ApiError, type Brand, type Domain, type Link, type Settings, type User } from './api'
 import { DetailSheet, LinksSheet, SettingsSheet } from './Sheets'
 import { Stage } from './Stage'
 import { applyTheme, storedTheme, type Theme } from './theme'
@@ -13,6 +13,7 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null)
   const [domains, setDomains] = useState<Domain[]>([])
   const [settings, setSettings] = useState<Settings | null>(null)
+  const [brand, setBrand] = useState<Brand>({ name: 'Wend', tagline: '' })
   const [links, setLinks] = useState<Link[]>([])
   const [theme, setTheme] = useState<Theme>(storedTheme)
   const [sheet, setSheet] = useState<Sheet>('none')
@@ -33,6 +34,11 @@ export default function App() {
   }, [])
 
   useEffect(() => applyTheme(theme), [theme])
+
+  // Whoever runs this instance puts their own name on the tab.
+  useEffect(() => {
+    if (brand.name) document.title = brand.name
+  }, [brand.name])
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -60,6 +66,7 @@ export default function App() {
         setUser(me.user)
         setDomains(me.domains)
         setSettings(me.settings)
+        if (me.brand) setBrand(me.brand)
         await loadLinks()
       } catch {
         setUser(null)
@@ -133,7 +140,7 @@ export default function App() {
   }
 
   if (!user || !settings) {
-    return <SignIn error={authError} />
+    return <SignIn error={authError} brand={brand} />
   }
 
   const detailLink = links.find((l) => l.id === detailId) ?? null
@@ -262,7 +269,7 @@ export default function App() {
   )
 }
 
-function SignIn({ error }: { error: string | null }) {
+function SignIn({ error, brand }: { error: string | null; brand: Brand }) {
   return (
     <div id="app">
       <div className="view on">
@@ -270,8 +277,8 @@ function SignIn({ error }: { error: string | null }) {
           <span className="mark">
             <I.Key size={24} />
           </span>
-          <h1>Collines Go</h1>
-          <p>Sign in with the account that has been granted access.</p>
+          <h1>{brand.name || 'Sign in'}</h1>
+          <p>{brand.tagline || 'Sign in with the account that has been granted access.'}</p>
           <button className="big-act" onClick={() => { window.location.href = '/auth/login' }}>
             <I.Key size={18} />
             Continue with PocketID

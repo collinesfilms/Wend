@@ -6,26 +6,29 @@ import * as I from './icons'
 import { draw as drawQr } from './qr'
 
 type Step = 'empty' | 'captured' | 'options' | 'result' | 'qr'
-type Division = 'pill' | 'half' | 'quad'
+type Division = 'pill' | 'spread'
 type PanelKey = 'slug' | 'pass' | 'exp'
 
 const EMPTY_H = 132
-const COMPOSE_H = 216
+const COMPOSE_H = 128
 const PAD = 32 // stage padding, top + bottom
 
-const CELL_ORDER = ['shorten', 'slug', 'pass', 'exp'] as const
+// Shorten is not one of these: it is the bar under the card. What divides is
+// the set of things you can change about the link before you make it.
+const CELL_ORDER = ['slug', 'pass', 'exp'] as const
 
 /** Where a cell sits at each stage of the division. */
-function cellPos(i: number, division: Division): React.CSSProperties {
+function cellPos(i: number, division: Division, offset = 0): React.CSSProperties {
   if (division === 'pill') {
     return { top: 0, left: 0, width: '100%', height: EMPTY_H }
   }
-  const right = i === 1 || i === 3
-  const left = right ? 'calc(50% + 5px)' : 0
-  const width = 'calc(50% - 5px)'
-  if (division === 'half') return { top: 50, left, width, height: 166 }
-  return { top: i >= 2 ? 138 : 50, left, width, height: 78 }
+  const width = 'calc((100% - 20px) / 3)'
+  const left =
+    i === 0 ? 0 : i === 1 ? 'calc((100% - 20px) / 3 + 10px)' : 'calc((100% - 20px) / 3 * 2 + 20px)'
+  return { top: 50 + offset, left, width, height: 78 }
 }
+
+const DUPE_H = 48 // the note plus its gap
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 const nextFrame = () =>
@@ -54,9 +57,12 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
   const [created, setCreated] = useState<Link | null>(null)
   const [copied, setCopied] = useState<{ ok: boolean; text: string } | null>(null)
   const [stageH, setStageH] = useState(EMPTY_H)
+  const [dupe, setDupe] = useState<Link | null>(null)
 
   const alive = useRef(true)
+  const dupeRef = useRef<Link | null>(null)
   useEffect(() => () => { alive.current = false }, [])
+  useEffect(() => { dupeRef.current = dupe }, [dupe])
 
   const panelRefs = {
     slug: useRef<HTMLDivElement>(null),
@@ -77,13 +83,10 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
     setDivision('pill')
     await nextFrame()
     if (!alive.current) return
-    setStageH(COMPOSE_H)
-    setDivision('half')
-    await wait(240)
-    if (!alive.current) return
+    setStageH(COMPOSE_H + (dupeRef.current ? DUPE_H : 0))
     setDivided(true)
-    setDivision('quad')
-    await wait(190)
+    setDivision('spread')
+    await wait(230)
     if (!alive.current) return
     setLabelled(true)
     setStep('options')
@@ -92,8 +95,15 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
   const capture = useCallback(
     (raw: string) => {
       if (!isUrl(raw)) return
-      setUrl(raw.trim())
+      const clean = raw.trim()
+      setUrl(clean)
       setStep('captured')
+      // Making a second link to the same place is rarely what anyone wants, so
+      // say it already exists and offer the one that does.
+      void api
+        .findByDest(clean)
+        .then((found) => { if (alive.current) setDupe(found) })
+        .catch(() => {})
       window.setTimeout(() => { if (alive.current) void divide() }, 430)
     },
     [divide],
@@ -130,6 +140,20 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
     else onToast('Nothing to paste — copy a link first.', true)
   }
 
+  // Reusing lands on exactly the same result screen a fresh link would.
+  const useExisting = async (link: Link) => {
+    setDupe(null)
+    setCreated(link)
+    setStep('result')
+    setSlug(link.slug)
+    const ok = settings.auto_copy ? await copyText(link.short_url) : false
+    if (!alive.current) return
+    setCopied({
+      ok,
+      text: ok ? 'Copied to your clipboard' : 'Press Copy to put it on your clipboard',
+    })
+  }
+
   const reset = () => {
     setStep('empty')
     setDivision('pill')
@@ -142,6 +166,7 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
     setPanel(null)
     setCreated(null)
     setCopied(null)
+    setDupe(null)
     setStageH(EMPTY_H)
   }
 
@@ -154,14 +179,22 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
   }
   const closePanel = () => {
     setPanel(null)
-    setStageH(COMPOSE_H)
+    setStageH(COMPOSE_H + (dupe ? DUPE_H : 0))
   }
 
+  // The expiry panel grows when the custom date appears. Watching the panel
+  // keeps the card and the expanded cell exactly as tall as their content
+  // instead of clipping it.
   useLayoutEffect(() => {
     if (!panel) return
     const el = panelRefs[panel].current
-    if (el) setStageH(el.offsetHeight)
-  })
+    if (!el) return
+    const sync = () => setStageH(el.offsetHeight)
+    sync()
+    const ro = new ResizeObserver(sync)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [panel])
 
   useEffect(() => {
     if (panel === 'slug') window.setTimeout(() => slugInput.current?.focus(), 320)
@@ -275,8 +308,6 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
 
   const cellValue = (key: (typeof CELL_ORDER)[number]) => {
     switch (key) {
-      case 'shorten':
-        return slug ? 'custom' : 'random'
       case 'slug':
         return slug ? `/${slug}` : 'auto'
       case 'pass':
@@ -293,6 +324,7 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
   const showHead = (step === 'options' || step === 'captured') && division !== 'pill' && !panel
 
   return (
+    <div className="stage-wrap">
     <div className="stage" style={{ height: stageH + PAD }}>
       <div className="stage-body">
         <button
@@ -325,6 +357,15 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
           </button>
         </div>
 
+        <div className={`dupe-note${showHead && dupe ? ' on' : ''}`} style={{ top: 48 }}>
+          <span className="txt">
+            Already shortened as /{dupe?.slug}
+          </span>
+          <button className="use" onClick={() => dupe && useExisting(dupe)}>
+            Use it
+          </button>
+        </div>
+
         {CELL_ORDER.map((key, i) => (
           <button
             key={key}
@@ -340,19 +381,17 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
             style={{
               ...(panel === key
                 ? { top: 0, left: 0, width: '100%', height: stageH }
-                : cellPos(i, division)),
+                : cellPos(i, division, dupe ? DUPE_H : 0)),
               ...(cellsHidden || (panel && panel !== key)
                 ? { opacity: 0, pointerEvents: 'none' as const }
                 : null),
               ...(step === 'empty' ? { opacity: 0, pointerEvents: 'none' as const } : null),
             }}
-            disabled={busy && key === 'shorten'}
-            onClick={() => (key === 'shorten' ? void shorten() : openPanel(key))}
+            onClick={() => openPanel(key)}
           >
             <span className="cell-face">
               <span className="top">
                 <span className="ico">
-                  {key === 'shorten' ? <I.Bolt size={19} /> : null}
                   {key === 'slug' ? <I.Pencil size={19} /> : null}
                   {key === 'pass' ? <I.Lock size={19} /> : null}
                   {key === 'exp' ? <I.Clock size={19} /> : null}
@@ -360,7 +399,6 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
               </span>
               <span className="bot">
                 <span className="name">
-                  {key === 'shorten' && (busy ? 'Creating…' : 'Shorten')}
                   {key === 'slug' && 'Slug'}
                   {key === 'pass' && 'Password'}
                   {key === 'exp' && 'Expires'}
@@ -614,6 +652,17 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
           </div>
         </div>
       </div>
+    </div>
+
+      <button
+        className={`shorten-bar${step === 'options' && !panel ? ' on' : ''}`}
+        disabled={busy}
+        onClick={() => void shorten()}
+      >
+        <I.Bolt size={18} />
+        {busy ? 'Creating…' : 'Shorten'}
+        <span className="sub">{slug ? `/${slug}` : 'random code'}</span>
+      </button>
     </div>
   )
 }

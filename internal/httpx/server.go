@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/collinesfilms/shortify/internal/auth"
-	"github.com/collinesfilms/shortify/internal/config"
-	"github.com/collinesfilms/shortify/internal/store"
-	"github.com/collinesfilms/shortify/web"
+	"github.com/collinesfilms/wend/internal/auth"
+	"github.com/collinesfilms/wend/internal/config"
+	"github.com/collinesfilms/wend/internal/store"
+	"github.com/collinesfilms/wend/web"
 )
 
 type Server struct {
@@ -94,6 +94,7 @@ func (s *Server) Handler() http.Handler {
 	api.HandleFunc("DELETE /api/links/{id}", s.handleDeleteLink)
 	api.HandleFunc("POST /api/links/{id}/aliases", s.handleAddAlias)
 	api.HandleFunc("GET /api/slug-check", s.handleCheckSlug)
+	api.HandleFunc("GET /api/links/find", s.handleFindByDest)
 	api.HandleFunc("POST /api/domains", s.handleAddDomain)
 	api.HandleFunc("POST /api/domains/{id}/default", s.handleDefaultDomain)
 	api.HandleFunc("DELETE /api/domains/{id}", s.handleDeleteDomain)

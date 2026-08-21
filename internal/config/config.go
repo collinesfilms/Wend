@@ -22,6 +22,10 @@ type Config struct {
 
 	TrustProxy bool // read the client IP from X-Forwarded-For
 	Dev        bool // relax cookie security, serve the Vite dev proxy
+
+	// Whoever runs this can put their own name on it; the defaults are ours.
+	BrandName string
+	Tagline   string
 }
 
 func env(key, def string) string {
@@ -48,13 +52,15 @@ func envBool(key string, def bool) bool {
 func Load() (*Config, error) {
 	c := &Config{
 		Listen:           env("CG_LISTEN", ":8080"),
-		DBPath:           env("CG_DB_PATH", "/data/collinesgo.db"),
+		DBPath:           env("CG_DB_PATH", "/data/wend.db"),
 		BaseURL:          strings.TrimRight(env("CG_BASE_URL", ""), "/"),
 		OIDCIssuer:       strings.TrimRight(env("CG_OIDC_ISSUER", ""), "/"),
 		OIDCClientID:     env("CG_OIDC_CLIENT_ID", ""),
 		OIDCClientSecret: env("CG_OIDC_CLIENT_SECRET", ""),
 		TrustProxy:       envBool("CG_TRUST_PROXY", true),
 		Dev:              envBool("CG_DEV", false),
+		BrandName:        env("CG_BRAND_NAME", "Wend"),
+		Tagline:          env("CG_TAGLINE", "Short links, on your own domain."),
 	}
 
 	for _, d := range strings.Split(env("CG_SHORT_DOMAINS", ""), ",") {

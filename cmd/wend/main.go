@@ -1,4 +1,4 @@
-// Command collinesgo runs the Collines Go URL shortener: one binary that
+// Command wend runs the Wend link shortener: one binary that
 // serves the admin interface, the API and the short links themselves.
 package main
 
@@ -13,10 +13,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/collinesfilms/shortify/internal/auth"
-	"github.com/collinesfilms/shortify/internal/config"
-	"github.com/collinesfilms/shortify/internal/httpx"
-	"github.com/collinesfilms/shortify/internal/store"
+	"github.com/collinesfilms/wend/internal/auth"
+	"github.com/collinesfilms/wend/internal/config"
+	"github.com/collinesfilms/wend/internal/httpx"
+	"github.com/collinesfilms/wend/internal/store"
 )
 
 func main() {
@@ -24,12 +24,12 @@ func main() {
 
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("collinesgo: %v", err)
+		log.Fatalf("wend: %v", err)
 	}
 
 	st, err := store.Open(cfg.DBPath)
 	if err != nil {
-		log.Fatalf("collinesgo: %v", err)
+		log.Fatalf("wend: %v", err)
 	}
 	defer st.Close()
 
@@ -37,7 +37,7 @@ func main() {
 	defer stop()
 
 	if err := st.EnsureDomains(ctx, cfg.Domains); err != nil {
-		log.Fatalf("collinesgo: seed domains: %v", err)
+		log.Fatalf("wend: seed domains: %v", err)
 	}
 
 	// Discovery happens at startup so a wrong issuer fails here rather than at
@@ -46,13 +46,13 @@ func main() {
 	sessions := auth.NewSessions(st, secure)
 	oidc, err := auth.NewOIDC(ctx, sessions, st, cfg.OIDCIssuer, cfg.OIDCClientID, cfg.OIDCClientSecret, cfg.BaseURL)
 	if err != nil {
-		log.Fatalf("collinesgo: %v", err)
+		log.Fatalf("wend: %v", err)
 	}
 	go auth.SweepSessions(ctx, st)
 
 	srv, err := httpx.New(cfg, st, sessions, oidc)
 	if err != nil {
-		log.Fatalf("collinesgo: %v", err)
+		log.Fatalf("wend: %v", err)
 	}
 
 	server := &http.Server{
@@ -65,18 +65,18 @@ func main() {
 	}
 
 	go func() {
-		log.Printf("collinesgo: %s", cfg)
+		log.Printf("wend: %s", cfg)
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("collinesgo: listen: %v", err)
+			log.Fatalf("wend: listen: %v", err)
 		}
 	}()
 
 	<-ctx.Done()
-	log.Print("collinesgo: shutting down")
+	log.Print("wend: shutting down")
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	if err := server.Shutdown(shutdownCtx); err != nil {
-		log.Printf("collinesgo: shutdown: %v", err)
+		log.Printf("wend: shutdown: %v", err)
 	}
 }

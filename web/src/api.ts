@@ -35,7 +35,9 @@ export type Settings = {
   auto_paste: boolean
 }
 
-export type Me = { user: User; domains: Domain[]; settings: Settings }
+export type Brand = { name: string; tagline: string }
+
+export type Me = { user: User; domains: Domain[]; settings: Settings; brand: Brand }
 
 export class ApiError extends Error {
   status: number
@@ -96,6 +98,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ slug, domain_id: domainId ?? 0 }),
     }),
+
+  findByDest: (dest: string) =>
+    request<{ link: Link | null }>(`/api/links/find?dest=${encodeURIComponent(dest)}`).then(
+      (r) => r.link,
+    ),
 
   checkSlug: (slug: string, domainId: number) =>
     request<{ available: boolean; reason: string }>(

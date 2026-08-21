@@ -2,7 +2,7 @@
 // version the interface is drawn for.
 export type Theme = 'light' | 'dark'
 
-const KEY = 'collines-go-theme'
+const KEY = 'wend-theme'
 
 export function storedTheme(): Theme {
   try {

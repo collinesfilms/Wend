@@ -1,4 +1,4 @@
-module github.com/collinesfilms/shortify
+module github.com/collinesfilms/wend
 
 go 1.25.0
 

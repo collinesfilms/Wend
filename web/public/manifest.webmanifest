@@ -1,6 +1,6 @@
 {
-  "name": "Collines Go",
-  "short_name": "Go",
+  "name": "Wend",
+  "short_name": "Wend",
   "description": "Self-hosted link shortener",
   "start_url": "/",
   "scope": "/",

@@ -1,13 +1,13 @@
-// Collines Go service worker.
+// Wend service worker.
 //
 // The one rule that matters: this worker must never answer a navigation to a
 // short link. It is registered at the root, so every visit to
-// go.collines.co/<slug> passes through it, and a cached shell served there
+// <your-domain>/<slug> passes through it, and a cached shell served there
 // would break links that are already in people's hands - silently, and for
 // exactly the people who have used the interface. Only the shell and its own
 // assets are handled here; everything else goes straight to the network.
 
-const VERSION = 'cg-v1';
+const VERSION = 'wend-v1';
 const SHELL = '/';
 
 self.addEventListener('install', (event) => {

@@ -1,6 +1,6 @@
 services:
   shortener:
-    image: ghcr.io/collinesfilms/shortify:latest
+    image: ghcr.io/collinesfilms/wend:latest
     container_name: shortener
     restart: unless-stopped
     ports:

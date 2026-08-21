@@ -12,7 +12,7 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/collinesfilms/shortify/internal/store"
+	"github.com/collinesfilms/wend/internal/store"
 )
 
 // Password attempts are rate limited per client and slug so a protected link

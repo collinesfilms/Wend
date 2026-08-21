@@ -22,7 +22,7 @@ COPY web/embed.go ./web/
 COPY --from=web /app/web/dist ./web/dist
 ARG TARGETARCH
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} \
-    go build -trimpath -ldflags="-s -w" -o /out/collinesgo ./cmd/collinesgo
+    go build -trimpath -ldflags="-s -w" -o /out/wend ./cmd/wend
 
 # --- final image ----------------------------------------------------------
 FROM alpine:3.21
@@ -30,11 +30,11 @@ RUN apk add --no-cache ca-certificates tzdata wget \
  && addgroup -g 10001 -S app \
  && adduser -u 10001 -S -G app app \
  && mkdir -p /data && chown app:app /data
-COPY --from=build /out/collinesgo /usr/local/bin/collinesgo
+COPY --from=build /out/wend /usr/local/bin/wend
 USER app
 VOLUME /data
 EXPOSE 8080
-ENV CG_LISTEN=:8080 CG_DB_PATH=/data/collinesgo.db
+ENV CG_LISTEN=:8080 CG_DB_PATH=/data/wend.db
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD wget -qO- http://127.0.0.1:8080/health >/dev/null || exit 1
-ENTRYPOINT ["/usr/local/bin/collinesgo"]
+ENTRYPOINT ["/usr/local/bin/wend"]

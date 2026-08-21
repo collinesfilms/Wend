@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, ApiError, type Domain, type Link, type Settings, type User } from './api'
-import { copyText } from './clipboard'
+import { copyText, suggestPassword } from './clipboard'
 import { age, destLabel, EXPIRY_PRESETS, expiryToDate, relative, shortDate, type ExpiryKey } from './format'
 import * as I from './icons'
 
@@ -144,6 +144,93 @@ export function LinksSheet({ open, links, onOpenDetail, onClose, onQrFull, onToa
   )
 }
 
+/**
+ * One row that turns into a field in place. Browser prompts were a shortcut;
+ * this keeps editing inside the sheet, in the app's own shapes.
+ */
+function InlineEdit({
+  label,
+  value,
+  placeholder,
+  mono,
+  password,
+  hint,
+  check,
+  onCancel,
+  onSave,
+}: {
+  label: string
+  value: string
+  placeholder?: string
+  mono?: boolean
+  password?: boolean
+  hint?: string
+  check?: (value: string) => Promise<{ tone: '' | 'ok' | 'bad'; text: string; ok: boolean }>
+  onCancel: () => void
+  onSave: (value: string) => void
+}) {
+  const [draft, setDraft] = useState(value)
+  const [note, setNote] = useState<{ tone: '' | 'ok' | 'bad'; text: string }>({
+    tone: '',
+    text: hint ?? '',
+  })
+  const [ok, setOk] = useState(!check)
+
+  useEffect(() => {
+    if (!check) return
+    const value = draft.trim()
+    if (!value) {
+      setOk(false)
+      setNote({ tone: '', text: hint ?? '' })
+      return
+    }
+    setOk(false)
+    setNote({ tone: '', text: 'Checking' })
+    const timer = window.setTimeout(async () => {
+      const result = await check(value)
+      setNote({ tone: result.tone, text: result.text })
+      setOk(result.ok)
+    }, 380)
+    return () => window.clearTimeout(timer)
+  }, [draft, check, hint])
+
+  const disabled = !ok
+  return (
+    <div className="sec-row" style={{ display: 'grid', gap: 6 }}>
+      <span className="k" style={{ gridColumn: '1 / -1' }}>{label}</span>
+      <span className="row-edit">
+        <input
+          autoFocus
+          value={draft}
+          type={password ? 'text' : 'text'}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder={placeholder}
+          spellCheck={false}
+          autoCapitalize="off"
+          autoComplete="off"
+          style={mono ? undefined : { fontFamily: 'var(--font)' }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !disabled && draft.trim()) onSave(draft.trim())
+            if (e.key === 'Escape') onCancel()
+          }}
+        />
+        <button className="mini" style={{ minWidth: 0 }} onClick={onCancel}>
+          Cancel
+        </button>
+        <button
+          className="mini accent"
+          style={{ minWidth: 0 }}
+          disabled={disabled || !draft.trim()}
+          onClick={() => onSave(draft.trim())}
+        >
+          Save
+        </button>
+      </span>
+      {note?.text && <span className={`note ${note.tone}`}>{note.text}</span>}
+    </div>
+  )
+}
+
 // ---------------------------------------------------------------- detail
 
 type DetailSheetProps = {
@@ -157,14 +244,12 @@ type DetailSheetProps = {
 
 export function DetailSheet({ open, link, from, onBack, onChanged, onToast }: DetailSheetProps) {
   const [pending, setPending] = useState<string | null>(null)
-  const [aliasDraft, setAliasDraft] = useState('')
-  const [addingAlias, setAddingAlias] = useState(false)
+  const [editing, setEditing] = useState<null | 'dest' | 'pass' | 'alias'>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   useEffect(() => {
     setConfirmDelete(false)
-    setAddingAlias(false)
-    setAliasDraft('')
+    setEditing(null)
   }, [link?.id])
 
   if (!link) return <div className="sheet auto" aria-hidden="true" />
@@ -230,54 +315,76 @@ export function DetailSheet({ open, link, from, onBack, onChanged, onToast }: De
               Copy
             </button>
           </div>
-          <div className="sec-row">
-            <span className="k">Destination</span>
-            <span className="v">{destLabel(link.dest)}</span>
-            <button
-              className="mini"
-              onClick={() => {
-                const next = window.prompt('New destination', link.dest)
-                if (next && next !== link.dest) {
-                  void act('dest', () => api.updateLink(link.id, { dest: next }))
-                }
+          {editing === 'dest' ? (
+            <InlineEdit
+              label="Points to"
+              value={link.dest}
+              placeholder="https://…"
+              onCancel={() => setEditing(null)}
+              onSave={(next) => {
+                setEditing(null)
+                if (next !== link.dest) void act('dest', () => api.updateLink(link.id, { dest: next }))
               }}
-            >
-              Change
-            </button>
-          </div>
-          <div className="sec-row">
-            <span className="k">Extra slug</span>
-            <span className="v" style={{ color: link.aliases.length ? undefined : 'var(--ink-3)' }}>
-              {link.aliases.length ? link.aliases.map((a) => `/${a.slug}`).join(' · ') : 'none'}
-            </span>
-            <button className="mini accent" onClick={() => setAddingAlias((v) => !v)}>
-              {addingAlias ? 'Close' : 'Add'}
-            </button>
-          </div>
-          {addingAlias && (
-            <div className="add-domain">
-              <input
-                value={aliasDraft}
-                onChange={(e) => setAliasDraft(e.target.value)}
-                placeholder="another-slug"
-                autoComplete="off"
-                spellCheck={false}
-              />
-              <button
-                className="mini accent"
-                disabled={!aliasDraft.trim()}
-                onClick={() =>
-                  void act('alias', async () => {
-                    const updated = await api.addAlias(link.id, aliasDraft.trim().toLowerCase())
-                    setAliasDraft('')
-                    setAddingAlias(false)
-                    return updated
-                  })
-                }
-              >
+            />
+          ) : (
+            <div className="sec-row">
+              <span className="k">Points to</span>
+              <span className="v">{destLabel(link.dest)}</span>
+              <button className="mini" onClick={() => setEditing('dest')}>Change</button>
+            </div>
+          )}
+
+          {/* Aliases are chips, not a line of slashes: each one is its own
+              thing that can be removed, and adding one is the same field the
+              create flow uses. */}
+          <div className="sec-row" style={{ display: 'grid', gap: 8 }}>
+            <span className="k" style={{ gridColumn: '1 / -1' }}>Extra slugs</span>
+            <span className="row-edit" style={{ gridColumn: '1 / -1' }}>
+              {link.aliases.length ? (
+                <span className="alias-chips" style={{ flex: 1 }}>
+                  {link.aliases.map((a) => (
+                    <span className="alias-chip" key={a.slug}>
+                      /{a.slug}
+                    </span>
+                  ))}
+                </span>
+              ) : (
+                <span className="v" style={{ flex: 1, color: 'var(--ink-3)' }}>
+                  None. Another slug can open the same link.
+                </span>
+              )}
+              <button className="mini accent" style={{ minWidth: 0 }} onClick={() => setEditing('alias')}>
                 Add
               </button>
-            </div>
+            </span>
+          </div>
+          {editing === 'alias' && (
+            <InlineEdit
+              label="New slug for this link"
+              value=""
+              placeholder="another-slug"
+              mono
+              hint="Another slug that opens the same link, sharing its stats."
+              check={async (value) => {
+                try {
+                  const res = await api.checkSlug(value, link.domain_id)
+                  if (res.available) return { tone: 'ok', text: `/${value} is free.`, ok: true }
+                  if (res.reason === 'reserved') return { tone: 'bad', text: 'That slug is reserved.', ok: false }
+                  if (res.reason === 'invalid') return { tone: 'bad', text: 'Lowercase letters, numbers and dashes only.', ok: false }
+                  return { tone: 'bad', text: 'That one is already in use.', ok: false }
+                } catch {
+                  return { tone: '', text: 'Could not check that slug.', ok: false }
+                }
+              }}
+              onCancel={() => setEditing(null)}
+              onSave={(next) =>
+                void act('alias', async () => {
+                  const updated = await api.addAlias(link.id, next.toLowerCase())
+                  setEditing(null)
+                  return updated
+                })
+              }
+            />
           )}
         </div>
 
@@ -293,8 +400,7 @@ export function DetailSheet({ open, link, from, onBack, onChanged, onToast }: De
                   void act('pass', () => api.updateLink(link.id, { password: '' }))
                   return
                 }
-                const next = window.prompt('Password for this link')
-                if (next) void act('pass', () => api.updateLink(link.id, { password: next }))
+                setEditing('pass')
               }}
             >
               {link.has_password ? 'Remove' : 'Set'}
@@ -309,6 +415,22 @@ export function DetailSheet({ open, link, from, onBack, onChanged, onToast }: De
           </div>
         </div>
 
+        {editing === 'pass' && (
+          <div className="sec">
+            <InlineEdit
+              label="Password for this link"
+              value={suggestPassword()}
+              placeholder="Choose a password"
+              mono
+              onCancel={() => setEditing(null)}
+              onSave={(next) => {
+                setEditing(null)
+                void act('pass', () => api.updateLink(link.id, { password: next }))
+              }}
+            />
+          </div>
+        )}
+
         <div className="sec-title">Deletion</div>
         <div className="sec">
           <div className="sec-row wide">
@@ -318,7 +440,7 @@ export function DetailSheet({ open, link, from, onBack, onChanged, onToast }: De
                 : 'The link stops working and its slug is never handed out again.'}
             </span>
             <button
-              className="mini warn"
+              className={`mini warn${confirmDelete ? ' armed' : ''}`}
               onClick={() => {
                 if (!confirmDelete) return setConfirmDelete(true)
                 void act('delete', async () => {

@@ -15,9 +15,9 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/collinesfilms/shortify/internal/auth"
-	"github.com/collinesfilms/shortify/internal/config"
-	"github.com/collinesfilms/shortify/internal/store"
+	"github.com/collinesfilms/wend/internal/auth"
+	"github.com/collinesfilms/wend/internal/config"
+	"github.com/collinesfilms/wend/internal/store"
 )
 
 type harness struct {
@@ -339,5 +339,35 @@ func TestLinkStillResolvesWhenTheProxyRewritesHost(t *testing.T) {
 	}
 	if got := w.Header().Get("Location"); got != "https://collines.co/tp" {
 		t.Fatalf("Location = %q", got)
+	}
+}
+
+func TestFindByDestOffersTheExistingLink(t *testing.T) {
+	h := setup(t)
+	h.createLink(t, `{"dest":"https://example.com/report","slug":"rep"}`)
+
+	// The literal /find route has to win over /api/links/{id}, or this would
+	// be parsed as a link id and 400.
+	w := h.do(http.MethodGet,
+		"https://go.collines.co/api/links/find?dest=https%3A%2F%2Fexample.com%2Freport", "", true)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d: %s", w.Code, w.Body.String())
+	}
+	var got struct {
+		Link *struct {
+			Slug string `json:"slug"`
+		} `json:"link"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if got.Link == nil || got.Link.Slug != "rep" {
+		t.Fatalf("expected the existing link, got %s", w.Body.String())
+	}
+
+	w = h.do(http.MethodGet,
+		"https://go.collines.co/api/links/find?dest=https%3A%2F%2Fexample.com%2Fother", "", true)
+	if !strings.Contains(w.Body.String(), `"link":null`) {
+		t.Fatalf("unknown destination should report nothing: %s", w.Body.String())
 	}
 }
