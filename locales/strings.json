@@ -21,15 +21,15 @@
     "  visitor - the pages a person who clicks a short link can land on",
     "  months  - month names for the one date the server formats itself"
   ],
-
-  "languages": ["en", "fr"],
-
+  "languages": [
+    "en",
+    "fr"
+  ],
   "app": {
     "loading": {
       "en": "Loading…",
       "fr": "Chargement…"
     },
-
     "chrome.links": {
       "en": "Links",
       "fr": "Liens"
@@ -52,24 +52,23 @@
     },
     "chrome.theme.auto": {
       "en": "Theme: follow the system. Switch to light.",
-      "fr": "Thème : suivre le système. Passer en clair."
+      "fr": "Thème : automatique. Passer en clair."
     },
     "chrome.theme.light": {
       "en": "Theme: light. Switch to dark.",
-      "fr": "Thème : clair. Passer en sombre."
+      "fr": "Thème : clair. Passer en sombre."
     },
     "chrome.theme.dark": {
       "en": "Theme: dark. Follow the system.",
-      "fr": "Thème : sombre. Suivre le système."
+      "fr": "Thème : sombre. Revenir au thème automatique."
     },
-
     "signin.title": {
       "en": "Sign in",
       "fr": "Connexion"
     },
     "signin.body": {
       "en": "Sign in with the account that has been granted access.",
-      "fr": "Connectez-vous avec le compte auquel l'accès a été accordé."
+      "fr": "Connectez-vous avec un compte autorisé."
     },
     "signin.button": {
       "en": "Continue with PocketID",
@@ -77,9 +76,8 @@
     },
     "signin.fine": {
       "en": "There is nothing to sign up for. Access is granted in your identity provider, and revoked there too.",
-      "fr": "Il n'y a pas d'inscription. L'accès est accordé depuis votre fournisseur d'identité, et révoqué au même endroit."
+      "fr": "Il n’y a rien à créer ici. L’accès s’accorde depuis votre fournisseur d’identité, et se révoque au même endroit."
     },
-
     "toast.links_failed": {
       "en": "Could not load your links",
       "fr": "Impossible de charger vos liens"
@@ -94,15 +92,15 @@
     },
     "toast.clipboard_blocked": {
       "en": "Your browser blocked the clipboard",
-      "fr": "Votre navigateur a bloqué le presse-papiers"
+      "fr": "Votre navigateur a bloqué l’accès au presse-papiers"
     },
     "toast.nothing_to_paste": {
       "en": "Nothing to paste — copy a link first.",
-      "fr": "Rien à coller — copiez d'abord un lien."
+      "fr": "Rien à coller — copiez d’abord un lien."
     },
     "toast.generic_failure": {
       "en": "That did not work",
-      "fr": "Cela n'a pas fonctionné"
+      "fr": "Cela n’a pas fonctionné"
     },
     "toast.create_failed": {
       "en": "Could not create the link",
@@ -110,14 +108,12 @@
     },
     "toast.domain_added": {
       "en": "Domain added. Point it at this server too.",
-      "fr": "Domaine ajouté. Faites-le pointer vers ce serveur également."
+      "fr": "Domaine ajouté. Pensez à le faire pointer vers ce serveur."
     },
-
     "qr.full.hint": {
       "en": "Tap anywhere to close",
-      "fr": "Touchez n'importe où pour fermer"
+      "fr": "Appuyez n’importe où pour fermer"
     },
-
     "stage.paste": {
       "en": "Paste a link",
       "fr": "Coller un lien"
@@ -144,9 +140,8 @@
     },
     "stage.dupe.use": {
       "en": "Use it",
-      "fr": "L'utiliser"
+      "fr": "L’utiliser"
     },
-
     "cell.slug": {
       "en": "Slug",
       "fr": "Slug"
@@ -171,7 +166,6 @@
       "en": "never",
       "fr": "jamais"
     },
-
     "panel.cancel": {
       "en": "Cancel",
       "fr": "Annuler"
@@ -214,7 +208,7 @@
     },
     "panel.password.note": {
       "en": "Visitors type this before the link opens.",
-      "fr": "Les visiteurs le saisissent avant que le lien s'ouvre."
+      "fr": "Les visiteurs devront le saisir pour ouvrir le lien."
     },
     "panel.password.remove": {
       "en": "Remove",
@@ -234,7 +228,7 @@
     },
     "panel.expiry.note": {
       "en": "After this the link shows an expired page. You can revive it later.",
-      "fr": "Passé ce moment, le lien affiche une page d'expiration. Vous pourrez le réactiver plus tard."
+      "fr": "Passé cette date, le lien affiche une page d’expiration. Vous pourrez le réactiver plus tard."
     },
     "panel.expiry.never": {
       "en": "Never",
@@ -242,13 +236,12 @@
     },
     "panel.expiry.set": {
       "en": "Set expiry",
-      "fr": "Définir l'expiration"
+      "fr": "Définir l’expiration"
     },
     "panel.expiry.on_date": {
       "en": "on {date}",
       "fr": "le {date}"
     },
-
     "slugcheck.hint_empty": {
       "en": "Leave empty for a random code.",
       "fr": "Laissez vide pour un code aléatoire."
@@ -275,13 +268,12 @@
     },
     "slugcheck.taken": {
       "en": "That one is already in use.",
-      "fr": "Celui-ci est déjà utilisé."
+      "fr": "Celui-ci est déjà pris."
     },
     "slugcheck.failed": {
       "en": "Could not check that slug.",
       "fr": "Impossible de vérifier ce slug."
     },
-
     "shorten": {
       "en": "Shorten",
       "fr": "Raccourcir"
@@ -294,14 +286,13 @@
       "en": "random code",
       "fr": "code aléatoire"
     },
-
     "result.copied": {
       "en": "Copied to your clipboard",
       "fr": "Copié dans votre presse-papiers"
     },
     "result.copy_prompt": {
       "en": "Press Copy to put it on your clipboard",
-      "fr": "Appuyez sur Copier pour le mettre dans votre presse-papiers"
+      "fr": "Appuyez sur Copier pour l’envoyer dans le presse-papiers"
     },
     "result.copy": {
       "en": "Copy link",
@@ -339,7 +330,6 @@
       "en": "Full screen",
       "fr": "Plein écran"
     },
-
     "list.title": {
       "en": "Links",
       "fr": "Liens"
@@ -366,7 +356,7 @@
     },
     "list.empty": {
       "en": "No links yet.",
-      "fr": "Aucun lien pour l'instant."
+      "fr": "Aucun lien pour l’instant."
     },
     "list.no_match": {
       "en": "No links match that.",
@@ -380,7 +370,6 @@
       "en": "QR code",
       "fr": "QR code"
     },
-
     "inline.cancel": {
       "en": "Cancel",
       "fr": "Annuler"
@@ -389,7 +378,6 @@
       "en": "Save",
       "fr": "Enregistrer"
     },
-
     "detail.title": {
       "en": "Link detail",
       "fr": "Détail du lien"
@@ -416,11 +404,11 @@
     },
     "detail.stat.nothing_yet": {
       "en": "nothing yet",
-      "fr": "rien encore"
+      "fr": "rien pour l’instant"
     },
     "detail.stat.share_of_opens": {
       "en": "{percent}% of opens",
-      "fr": "{percent} % des ouvertures"
+      "fr": "{percent} % des ouvertures"
     },
     "detail.section.link": {
       "en": "Link",
@@ -520,7 +508,7 @@
     },
     "detail.delete.confirm_explain": {
       "en": "Confirm: the link stops working immediately.",
-      "fr": "Confirmez : le lien cesse de fonctionner immédiatement."
+      "fr": "Confirmez : le lien cesse de fonctionner immédiatement."
     },
     "detail.delete": {
       "en": "Delete",
@@ -530,7 +518,6 @@
       "en": "Confirm",
       "fr": "Confirmer"
     },
-
     "settings.title": {
       "en": "Settings",
       "fr": "Réglages"
@@ -569,7 +556,7 @@
     },
     "settings.domain.note": {
       "en": "A domain added here also has to point at this server and have a certificate. Links already made keep the domain they were created on.",
-      "fr": "Un domaine ajouté ici doit aussi pointer vers ce serveur et disposer d'un certificat. Les liens déjà créés conservent le domaine sur lequel ils ont été créés."
+      "fr": "Un domaine ajouté ici doit aussi pointer vers ce serveur et disposer d’un certificat. Les liens existants gardent le domaine sur lequel ils ont été créés."
     },
     "settings.section.new_links": {
       "en": "New links",
@@ -621,11 +608,11 @@
     },
     "settings.auto_paste": {
       "en": "Paste on open",
-      "fr": "Coller à l'ouverture"
+      "fr": "Coller à l’ouverture"
     },
     "settings.auto_paste.note": {
       "en": "Where the browser allows it.",
-      "fr": "Là où le navigateur l'autorise."
+      "fr": "Là où le navigateur l’autorise."
     },
     "settings.section.appearance": {
       "en": "Appearance",
@@ -637,7 +624,7 @@
     },
     "settings.theme.note": {
       "en": "Kept with your account, so it follows you between devices.",
-      "fr": "Conservé avec votre compte : il vous suit d'un appareil à l'autre."
+      "fr": "Conservé avec votre compte : il vous suit d’un appareil à l’autre."
     },
     "settings.theme.auto": {
       "en": "Auto",
@@ -663,7 +650,6 @@
       "en": "Sign out",
       "fr": "Se déconnecter"
     },
-
     "expiry.1h": {
       "en": "In 1 hour",
       "fr": "Dans 1 heure"
@@ -722,15 +708,13 @@
     },
     "time.just_now": {
       "en": "just now",
-      "fr": "à l'instant"
+      "fr": "à l’instant"
     },
-
     "http.error": {
       "en": "Error {status}",
       "fr": "Erreur {status}"
     }
   },
-
   "errors": {
     "could not read that request": {
       "en": "could not read that request",
@@ -750,7 +734,7 @@
     },
     "could not save your preferences": {
       "en": "could not save your preferences",
-      "fr": "impossible d'enregistrer vos préférences"
+      "fr": "impossible d’enregistrer vos préférences"
     },
     "could not load the domains": {
       "en": "could not load the domains",
@@ -758,7 +742,7 @@
     },
     "that domain is not valid": {
       "en": "that domain is not valid",
-      "fr": "ce domaine n'est pas valide"
+      "fr": "ce domaine n’est pas valide"
     },
     "that domain is already registered": {
       "en": "that domain is already registered",
@@ -766,7 +750,7 @@
     },
     "could not add the domain": {
       "en": "could not add the domain",
-      "fr": "impossible d'ajouter le domaine"
+      "fr": "impossible d’ajouter le domaine"
     },
     "invalid identifier": {
       "en": "invalid identifier",
@@ -790,11 +774,11 @@
     },
     "could not look that up": {
       "en": "could not look that up",
-      "fr": "impossible d'effectuer cette recherche"
+      "fr": "la recherche a échoué"
     },
     "invalid destination: an http or https address is expected": {
       "en": "invalid destination: an http or https address is expected",
-      "fr": "destination invalide : une adresse http ou https est attendue"
+      "fr": "destination invalide : une adresse http ou https est attendue"
     },
     "invalid destination": {
       "en": "invalid destination",
@@ -802,7 +786,7 @@
     },
     "invalid expiry date": {
       "en": "invalid expiry date",
-      "fr": "date d'expiration invalide"
+      "fr": "date d’expiration invalide"
     },
     "could not protect the link": {
       "en": "could not protect the link",
@@ -842,7 +826,7 @@
     },
     "could not add that": {
       "en": "could not add that",
-      "fr": "impossible d'ajouter cela"
+      "fr": "l’ajout a échoué"
     },
     "the last domain cannot be removed": {
       "en": "the last domain cannot be removed",
@@ -850,7 +834,7 @@
     },
     "that domain still has links": {
       "en": "that domain still has links",
-      "fr": "ce domaine porte encore des liens"
+      "fr": "des liens utilisent encore ce domaine"
     },
     "sign in to continue": {
       "en": "sign in to continue",
@@ -861,7 +845,6 @@
       "fr": "erreur interne"
     }
   },
-
   "visitor": {
     "gate.title": {
       "en": "Protected link",
@@ -887,7 +870,6 @@
       "en": "That password does not work.",
       "fr": "Ce mot de passe ne fonctionne pas."
     },
-
     "expired.title": {
       "en": "Expired link",
       "fr": "Lien expiré"
@@ -898,26 +880,24 @@
     },
     "expired.body": {
       "en": "Ask whoever sent it to you for an up-to-date link.",
-      "fr": "Demandez un lien à jour à la personne qui vous l'a envoyé."
+      "fr": "Demandez un lien à jour à la personne qui vous l’a envoyé."
     },
     "expired.body_dated": {
       "en": "It stopped working on {date}. Ask whoever sent it to you for an up-to-date link.",
-      "fr": "Il a cessé de fonctionner le {date}. Demandez un lien à jour à la personne qui vous l'a envoyé."
+      "fr": "Il a cessé de fonctionner le {date}. Demandez un lien à jour à la personne qui vous l’a envoyé."
     },
-
     "missing.title": {
       "en": "Link not found",
       "fr": "Lien introuvable"
     },
     "missing.heading": {
       "en": "This link does not exist",
-      "fr": "Ce lien n'existe pas"
+      "fr": "Ce lien n’existe pas"
     },
     "missing.body": {
       "en": "Check the address: a letter or a digit may have been copied wrong.",
-      "fr": "Vérifiez l'adresse : une lettre ou un chiffre a peut-être été mal recopié."
+      "fr": "Vérifiez l’adresse : une lettre ou un chiffre a peut-être été mal recopié."
     },
-
     "throttled.title": {
       "en": "Too many tries",
       "fr": "Trop de tentatives"
@@ -931,11 +911,34 @@
       "fr": "Patientez une minute avant de réessayer."
     }
   },
-
   "months": {
-    "en": ["January", "February", "March", "April", "May", "June",
-           "July", "August", "September", "October", "November", "December"],
-    "fr": ["janvier", "février", "mars", "avril", "mai", "juin",
-           "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
+    "en": [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December"
+    ],
+    "fr": [
+      "janvier",
+      "février",
+      "mars",
+      "avril",
+      "mai",
+      "juin",
+      "juillet",
+      "août",
+      "septembre",
+      "octobre",
+      "novembre",
+      "décembre"
+    ]
   }
 }
