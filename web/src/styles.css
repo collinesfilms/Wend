@@ -232,9 +232,6 @@ input:focus{outline:none;}
 .shorten-bar:hover{filter:brightness(1.06);}
 .shorten-bar:active{transform:scale(.99);}
 .shorten-bar[disabled]{opacity:.6;pointer-events:none;}
-.shorten-bar .sub{
-  font-family:var(--mono);font-size:11.5px;opacity:.7;font-weight:400;
-}
 
 .stage{
   position:relative;width:100%;max-width:432px;
@@ -367,7 +364,15 @@ input:focus{outline:none;}
 .cell-face .top{display:flex;align-items:center;justify-content:space-between;width:100%;}
 .cell-face .ico{position:relative;display:grid;place-items:center;transition:transform var(--t-mid) var(--ease);}
 .cell-face .bot{display:flex;flex-direction:column;gap:1px;width:100%;min-width:0;}
-.cell-face .name{font-size:13.5px;font-weight:500;letter-spacing:-.005em;line-height:1.25;}
+.cell-face .name{
+  font-size:13.5px;font-weight:500;letter-spacing:-.005em;line-height:1.25;
+  /* The cell is built for two lines; anything longer is clipped rather than
+     pushed out through the bottom. A word with nowhere to break is hyphenated
+     using the document's own language before it is broken at an arbitrary
+     letter, so "Expiration" becomes "Expira-tion" and not "Expiratio-n". */
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;
+  overflow:hidden;hyphens:auto;overflow-wrap:break-word;
+}
 .cell-face .val{
   font-family:var(--mono);font-size:11px;line-height:1.3;opacity:.72;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;
@@ -843,6 +848,9 @@ input:focus{outline:none;}
      is no zooming back out of an interface that has no scrollbars. The fields
      are grown instead: the layout has room for it, and it is the size a thumb
      wants anyway. */
+  .cell-face{padding:11px 10px;}
+  .cell-face .name{font-size:12.5px;}
+
   .search input,
   .field input,
   .row-edit input,
@@ -852,6 +860,13 @@ input:focus{outline:none;}
   .search{height:40px;}
   .row-edit input,.add-domain input{height:38px;}
 
+}
+
+/* The last stop before a third of the screen stops being a usable column.
+   Only the original SE and its contemporaries land here. */
+@media (max-width:359px){
+  .cell-face{padding:10px 8px;}
+  .cell-face .name{font-size:11px;}
 }
 
 /* ============================================================

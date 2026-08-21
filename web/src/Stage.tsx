@@ -11,8 +11,16 @@ type Division = 'pill' | 'spread'
 type PanelKey = 'slug' | 'pass' | 'exp'
 
 const EMPTY_H = 132
-const COMPOSE_H = 128
 const PAD = 32 // stage padding, top + bottom
+
+// A cell is tall enough for a two-line label in every language, not just for
+// the one-line English. "Password" fits on a line; "Mot de passe" does not, and
+// on a phone the cell is only a third of a narrow screen. Sizing every cell for
+// two lines keeps the three of them identical whatever they are called, which
+// shrinking the type to fit would not.
+const CELL_TOP = 50 // clear of the captured-URL header
+const CELL_H = 98
+const COMPOSE_H = CELL_TOP + CELL_H
 
 // Shorten is not one of these: it is the bar under the card. What divides is
 // the set of things you can change about the link before you make it.
@@ -26,7 +34,7 @@ function cellPos(i: number, division: Division, offset = 0): React.CSSProperties
   const width = 'calc((100% - 20px) / 3)'
   const left =
     i === 0 ? 0 : i === 1 ? 'calc((100% - 20px) / 3 + 10px)' : 'calc((100% - 20px) / 3 * 2 + 20px)'
-  return { top: 50 + offset, left, width, height: 78 }
+  return { top: CELL_TOP + offset, left, width, height: CELL_H }
 }
 
 const DUPE_H = 48 // the note plus its gap
@@ -658,7 +666,6 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
       >
         <I.Bolt size={18} />
         {busy ? t('shorten.busy') : t('shorten')}
-        <span className="sub">{slug ? `/${slug}` : t('shorten.random')}</span>
       </button>
     </div>
   )
