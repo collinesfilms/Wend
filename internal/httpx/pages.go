@@ -10,7 +10,7 @@ import (
 // make no external requests: students hit these, so nothing about them leaves
 // the server they came from.
 var visitorTmpl = template.Must(template.New("page").Parse(`<!doctype html>
-<html lang="fr">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -99,9 +99,9 @@ button:hover{transform:translateY(-1px);filter:brightness(1.06)}
   {{if .ShowForm}}
   <form method="POST" action="{{.Action}}">
     <div class="field">
-      <input type="password" name="password" placeholder="Mot de passe" autocomplete="off" autofocus required>
+      <input type="password" name="password" placeholder="Password" autocomplete="off" autofocus required>
     </div>
-    <button type="submit">Ouvrir le lien</button>
+    <button type="submit">Open the link</button>
   </form>
   {{end}}
   {{if .Note}}<div class="fine{{if .NoteBad}} bad{{end}}">{{.Note}}</div>{{end}}
@@ -120,7 +120,7 @@ type pageData struct {
 	Action   string
 	ShowForm bool
 	Dead     bool
-	Icon     string // "locked", "expired" ou "missing"
+	Icon     string // "locked", "expired" or "missing"
 }
 
 func renderPage(w http.ResponseWriter, status int, d pageData) {
@@ -133,9 +133,9 @@ func renderPage(w http.ResponseWriter, status int, d pageData) {
 
 func gatePage(w http.ResponseWriter, shortURL string, wrong bool) {
 	d := pageData{
-		Title:    "Lien protégé",
-		Heading:  "Ce lien est protégé",
-		Body:     "Saisissez le mot de passe qui vous a été communiqué.",
+		Title:    "Protected link",
+		Heading:  "This link is protected",
+		Body:     "Enter the password you were given to continue.",
 		Foot:     strings.TrimPrefix(shortURL, "https://"),
 		Action:   "",
 		ShowForm: true,
@@ -143,20 +143,20 @@ func gatePage(w http.ResponseWriter, shortURL string, wrong bool) {
 	}
 	status := http.StatusUnauthorized
 	if wrong {
-		d.Note = "Ce mot de passe ne fonctionne pas."
+		d.Note = "That password does not work."
 		d.NoteBad = true
 	}
 	renderPage(w, status, d)
 }
 
 func expiredPage(w http.ResponseWriter, shortURL, when string) {
-	body := "Demandez un lien à jour à la personne qui vous l’a transmis."
+	body := "Ask whoever sent it to you for an up-to-date link."
 	if when != "" {
-		body = "Il a cessé de fonctionner le " + when + ". " + body
+		body = "It stopped working on " + when + ". " + body
 	}
 	renderPage(w, http.StatusGone, pageData{
-		Title:   "Lien expiré",
-		Heading: "Ce lien a expiré",
+		Title:   "Expired link",
+		Heading: "This link has expired",
 		Body:    body,
 		Foot:    strings.TrimPrefix(shortURL, "https://"),
 		Dead:    true,
@@ -166,9 +166,9 @@ func expiredPage(w http.ResponseWriter, shortURL, when string) {
 
 func notFoundPage(w http.ResponseWriter, shortURL string) {
 	renderPage(w, http.StatusNotFound, pageData{
-		Title:   "Lien introuvable",
-		Heading: "Ce lien n’existe pas",
-		Body:    "Vérifiez l’adresse : une lettre ou un chiffre a peut-être été mal recopié.",
+		Title:   "Link not found",
+		Heading: "This link does not exist",
+		Body:    "Check the address: a letter or a digit may have been copied wrong.",
 		Foot:    strings.TrimPrefix(shortURL, "https://"),
 		Dead:    true,
 		Icon:    "missing",
@@ -177,9 +177,9 @@ func notFoundPage(w http.ResponseWriter, shortURL string) {
 
 func tooManyPage(w http.ResponseWriter, shortURL string) {
 	renderPage(w, http.StatusTooManyRequests, pageData{
-		Title:   "Trop d’essais",
-		Heading: "Trop d’essais",
-		Body:    "Patientez une minute avant de réessayer.",
+		Title:   "Too many tries",
+		Heading: "Too many tries",
+		Body:    "Wait a minute before trying again.",
 		Foot:    strings.TrimPrefix(shortURL, "https://"),
 		Dead:    true,
 		Icon:    "locked",

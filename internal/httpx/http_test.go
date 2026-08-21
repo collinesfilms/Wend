@@ -142,7 +142,7 @@ func TestUnknownSlugGetsABrandedPage(t *testing.T) {
 	if w.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want 404", w.Code)
 	}
-	if !strings.Contains(w.Body.String(), "Ce lien n’existe pas") {
+	if !strings.Contains(w.Body.String(), "This link does not exist") {
 		t.Fatal("the 404 should be the branded French page")
 	}
 	if ct := w.Header().Get("Content-Type"); !strings.HasPrefix(ct, "text/html") {
@@ -159,7 +159,7 @@ func TestExpiredLinkIsGoneNotRedirected(t *testing.T) {
 	if w.Code != http.StatusGone {
 		t.Fatalf("status = %d, want 410", w.Code)
 	}
-	if !strings.Contains(w.Body.String(), "Ce lien a expiré") {
+	if !strings.Contains(w.Body.String(), "This link has expired") {
 		t.Fatal("expected the expired page")
 	}
 }
@@ -173,7 +173,7 @@ func TestPasswordGate(t *testing.T) {
 	if w.Code != http.StatusUnauthorized {
 		t.Fatalf("GET status = %d, want 401", w.Code)
 	}
-	if !strings.Contains(w.Body.String(), "Ce lien est protégé") {
+	if !strings.Contains(w.Body.String(), "This link is protected") {
 		t.Fatal("expected the password gate")
 	}
 	if strings.Contains(w.Body.String(), "collines.co/secret") {

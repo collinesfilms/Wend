@@ -127,7 +127,7 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
   const onPasteClick = async () => {
     const text = await readClipboard(600)
     if (isUrl(text)) capture(text)
-    else onToast('Rien à coller : copiez d’abord un lien.', true)
+    else onToast('Nothing to paste — copy a link first.', true)
   }
 
   const reset = () => {
@@ -145,7 +145,7 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
     setStageH(EMPTY_H)
   }
 
-  // ------------------------------------------------------------ panneaux
+  // ------------------------------------------------------------ panels
 
   const openPanel = (key: PanelKey) => {
     if (step !== 'options') return
@@ -167,7 +167,7 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
     if (panel === 'slug') window.setTimeout(() => slugInput.current?.focus(), 320)
   }, [panel])
 
-  // ------------------------------------------------------------ création
+  // ------------------------------------------------------------ creation
 
   const shorten = async () => {
     if (!url || busy || !domain) return
@@ -197,11 +197,11 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
       setCopied({
         ok,
         text: ok
-          ? 'Copié dans le presse-papier'
-          : 'Appuyez sur Copier pour l’ajouter au presse-papier',
+          ? 'Copied to your clipboard'
+          : 'Press Copy to put it on your clipboard',
       })
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : 'Création impossible'
+      const message = err instanceof ApiError ? err.message : 'Could not create the link'
       onToast(message, true)
     } finally {
       if (alive.current) setBusy(false)
@@ -221,7 +221,7 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
       if (!alive.current) return
       setCopied({
         ok,
-        text: ok ? 'Copié dans le presse-papier' : 'Votre navigateur a bloqué le presse-papier',
+        text: ok ? 'Copied to your clipboard' : 'Your browser blocked the clipboard',
       })
     }, 140)
   }
@@ -234,11 +234,11 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
     })
   }
 
-  // ------------------------------------------------------------ brouillons
+  // ------------------------------------------------------------ drafts
 
   const [slugDraft, setSlugDraft] = useState('')
   const [slugState, setSlugState] = useState<{ tone: '' | 'ok' | 'bad'; text: string; busy: boolean }>(
-    { tone: '', text: 'Minuscules, chiffres et tirets.', busy: false },
+    { tone: '', text: 'Lowercase letters, numbers and dashes.', busy: false },
   )
   const [passDraft, setPassDraft] = useState('')
   const [passVisible, setPassVisible] = useState(true)
@@ -250,24 +250,24 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
   useEffect(() => {
     const value = slugDraft.trim().toLowerCase()
     if (!value) {
-      setSlugState({ tone: '', text: 'Laissez vide pour un code aléatoire.', busy: false })
+      setSlugState({ tone: '', text: 'Leave empty for a random code.', busy: false })
       return
     }
     if (!/^[a-z0-9][a-z0-9._-]{0,63}$/.test(value)) {
-      setSlugState({ tone: 'bad', text: 'Uniquement des minuscules, chiffres et tirets.', busy: false })
+      setSlugState({ tone: 'bad', text: 'Lowercase letters, numbers and dashes only.', busy: false })
       return
     }
-    setSlugState({ tone: '', text: 'Vérification', busy: true })
+    setSlugState({ tone: '', text: 'Checking', busy: true })
     const timer = window.setTimeout(async () => {
       if (!domain) return
       try {
         const res = await api.checkSlug(value, domain.id)
         if (!alive.current) return
-        if (res.available) setSlugState({ tone: 'ok', text: `${host}/${value} est libre.`, busy: false })
-        else if (res.reason === 'reserved') setSlugState({ tone: 'bad', text: 'Ce slug est réservé.', busy: false })
-        else setSlugState({ tone: 'bad', text: 'Ce slug est déjà utilisé.', busy: false })
+        if (res.available) setSlugState({ tone: 'ok', text: `${host}/${value} is free.`, busy: false })
+        else if (res.reason === 'reserved') setSlugState({ tone: 'bad', text: 'That slug is reserved.', busy: false })
+        else setSlugState({ tone: 'bad', text: 'That one is already in use.', busy: false })
       } catch {
-        if (alive.current) setSlugState({ tone: '', text: 'Vérification impossible.', busy: false })
+        if (alive.current) setSlugState({ tone: '', text: 'Could not check that slug.', busy: false })
       }
     }, 380)
     return () => window.clearTimeout(timer)
@@ -276,13 +276,13 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
   const cellValue = (key: (typeof CELL_ORDER)[number]) => {
     switch (key) {
       case 'shorten':
-        return slug ? 'personnalisé' : 'aléatoire'
+        return slug ? 'custom' : 'random'
       case 'slug':
         return slug ? `/${slug}` : 'auto'
       case 'pass':
-        return password ? '•'.repeat(Math.min(9, password.length)) : 'désactivé'
+        return password ? '•'.repeat(Math.min(9, password.length)) : 'off'
       case 'exp':
-        return expiry ? expiry.label : 'jamais'
+        return expiry ? expiry.label : 'never'
     }
   }
 
@@ -305,13 +305,13 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
           <span className="glyph">
             <I.Paste size={20} />
           </span>
-          <span className="lbl">{step === 'captured' && url ? hostOf(url) : 'Coller un lien'}</span>
+          <span className="lbl">{step === 'captured' && url ? hostOf(url) : 'Paste a link'}</span>
           <span className="hint">
             {step === 'captured' ? (
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>prêt à raccourcir</span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>ready to shorten</span>
             ) : (
               <>
-                ou appuyez sur <kbd>{isMac() ? '⌘V' : 'Ctrl V'}</kbd>
+                or press <kbd>{isMac() ? '⌘V' : 'Ctrl V'}</kbd>
               </>
             )}
           </span>
@@ -320,7 +320,7 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
         <div className={`urlhead${showHead ? ' on' : ''}`}>
           <span className="fav" />
           <span className="txt">{url ? <UrlLabel url={url} /> : null}</span>
-          <button className="x" onClick={reset} aria-label="Effacer le lien">
+          <button className="x" onClick={reset} aria-label="Clear the link">
             <I.X size={14} width={2} />
           </button>
         </div>
@@ -360,10 +360,10 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
               </span>
               <span className="bot">
                 <span className="name">
-                  {key === 'shorten' && (busy ? 'Création…' : 'Raccourcir')}
+                  {key === 'shorten' && (busy ? 'Creating…' : 'Shorten')}
                   {key === 'slug' && 'Slug'}
-                  {key === 'pass' && 'Mot de passe'}
-                  {key === 'exp' && 'Expiration'}
+                  {key === 'pass' && 'Password'}
+                  {key === 'exp' && 'Expires'}
                 </span>
                 <span className="val">{cellValue(key)}</span>
               </span>
@@ -379,7 +379,7 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
         >
           <div className="panel-head">
             <span className="ico" style={{ color: 'var(--moss)' }}><I.Pencil size={17} width={1.8} /></span>
-            <h3>Slug personnalisé</h3>
+            <h3>Custom slug</h3>
           </div>
           <div className="panel-body">
             <div className="field">
@@ -396,7 +396,7 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
               />
               <button
                 className="act"
-                aria-label="Générer un nouveau code"
+                aria-label="Generate a new code"
                 onClick={() => setSlugDraft(randomCode(settings.slug_length))}
               >
                 <I.Cycle size={15} width={1.8} />
@@ -408,7 +408,7 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
             </div>
           </div>
           <div className="panel-acts">
-            <button className="pa-ghost" onClick={closePanel}>Annuler</button>
+            <button className="pa-ghost" onClick={closePanel}>Cancel</button>
             <button
               className="pa-main"
               style={{ background: 'var(--moss)' }}
@@ -418,12 +418,12 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
                 closePanel()
               }}
             >
-              {slugDraft.trim() ? 'Utiliser ce slug' : 'Utiliser un code aléatoire'}
+              {slugDraft.trim() ? 'Use this slug' : 'Use a random code'}
             </button>
           </div>
         </div>
 
-        {/* ---------------- mot de passe ---------------- */}
+        {/* ---------------- password ---------------- */}
         <div
           ref={panelRefs.pass}
           className={`panel${panel === 'pass' ? ' on' : ''}`}
@@ -431,7 +431,7 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
         >
           <div className="panel-head">
             <span className="ico" style={{ color: 'var(--slate)' }}><I.Lock size={17} width={1.8} /></span>
-            <h3>Mot de passe</h3>
+            <h3>Password</h3>
           </div>
           <div className="panel-body">
             <div className="field">
@@ -442,33 +442,33 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
                 spellCheck={false}
                 autoCapitalize="off"
                 autoComplete="off"
-                placeholder="Choisir un mot de passe"
+                placeholder="Choose a password"
               />
               <button
                 className="act"
-                aria-label={passVisible ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                aria-label={passVisible ? 'Hide the password' : 'Show the password'}
                 onClick={() => setPassVisible((v) => !v)}
               >
                 {passVisible ? <I.EyeOff size={15} width={1.8} /> : <I.Eye size={15} width={1.8} />}
               </button>
               <button
                 className="act"
-                aria-label="Proposer un autre mot de passe"
+                aria-label="Suggest another password"
                 onClick={() => { setPassDraft(suggestPassword()); setPassVisible(true) }}
               >
                 <I.Cycle size={15} width={1.8} />
               </button>
             </div>
-            <div className="field-note">Les visiteurs le saisissent avant l’ouverture du lien.</div>
+            <div className="field-note">Visitors type this before the link opens.</div>
           </div>
           <div className="panel-acts">
-            <button className="pa-ghost" onClick={closePanel}>Annuler</button>
+            <button className="pa-ghost" onClick={closePanel}>Cancel</button>
             {password && (
               <button
                 className="pa-clear"
                 onClick={() => { setPassword(null); setPassDraft(''); closePanel() }}
               >
-                Retirer
+                Remove
               </button>
             )}
             <button
@@ -477,12 +477,12 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
               disabled={!passDraft.trim()}
               onClick={() => { setPassword(passDraft.trim() || null); closePanel() }}
             >
-              Protéger le lien
+              Protect the link
             </button>
           </div>
         </div>
 
-        {/* ---------------- expiration ---------------- */}
+        {/* ---------------- expiry ---------------- */}
         <div
           ref={panelRefs.exp}
           className={`panel${panel === 'exp' ? ' on' : ''}`}
@@ -490,7 +490,7 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
         >
           <div className="panel-head">
             <span className="ico" style={{ color: 'var(--ochre)' }}><I.Clock size={17} width={1.8} /></span>
-            <h3>Expiration</h3>
+            <h3>Expires</h3>
           </div>
           <div className="panel-body">
             <div className="chips">
@@ -504,7 +504,7 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
                 </button>
               ))}
               <button className={expDraft === 'custom' ? 'sel' : ''} onClick={() => setExpDraft('custom')}>
-                Choisir une date
+                Pick a date
               </button>
             </div>
             <div className={`custom-date${expDraft === 'custom' ? ' on' : ''}`}>
@@ -515,14 +515,14 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
               />
             </div>
             <div className="field-note">
-              Ensuite, le lien affiche une page d’expiration. Vous pourrez le réactiver.
+              After this the link shows an expired page. You can revive it later.
             </div>
           </div>
           <div className="panel-acts">
-            <button className="pa-ghost" onClick={closePanel}>Annuler</button>
+            <button className="pa-ghost" onClick={closePanel}>Cancel</button>
             {expiry && (
               <button className="pa-clear" onClick={() => { setExpiry(null); setExpDraft(null); closePanel() }}>
-                Jamais
+                Never
               </button>
             )}
             <button
@@ -533,7 +533,7 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
                 if (expDraft === 'custom') {
                   const at = new Date(expCustom)
                   if (Number.isNaN(at.getTime())) return
-                  setExpiry({ key: 'custom', label: `le ${at.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}`, at })
+                  setExpiry({ key: 'custom', label: `on ${at.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`, at })
                 } else if (expDraft) {
                   const preset = EXPIRY_PRESETS.find((p) => p.key === expDraft)!
                   setExpiry({ key: expDraft, label: preset.short, at: expiryToDate(expDraft) })
@@ -541,12 +541,12 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
                 closePanel()
               }}
             >
-              Définir l’expiration
+              Set expiry
             </button>
           </div>
         </div>
 
-        {/* ---------------- résultat ---------------- */}
+        {/* ---------------- result ---------------- */}
         <div ref={resultRef} className={`result${step === 'result' ? ' on' : ''}`}>
           <div className="link-plate">
             <span className="notch l" aria-hidden="true" />
@@ -568,31 +568,31 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
           <div className="result-acts">
             <button className="ra-copy" onClick={() => void copyAgain()}>
               <I.Copy size={16} width={1.8} />
-              Copier le lien
+              Copy link
             </button>
-            <button className="ra-side" aria-label="Code QR" onClick={showQr}>
+            <button className="ra-side" aria-label="QR code" onClick={showQr}>
               <I.Qr size={17} width={1.7} />
             </button>
             <button
               className="ra-side"
-              aria-label="Modifier ce lien"
+              aria-label="Edit this link"
               onClick={() => created && onOpenDetail(created.id)}
             >
               <I.Tune size={17} width={1.8} />
             </button>
           </div>
           <div className="result-meta">
-            {slug && <span className="tag slug-t"><I.Pencil size={11} width={2} />slug personnalisé</span>}
-            {password && <span className="tag pass-t"><I.Lock size={11} width={2} />mot de passe</span>}
+            {slug && <span className="tag slug-t"><I.Pencil size={11} width={2} />custom slug</span>}
+            {password && <span className="tag pass-t"><I.Lock size={11} width={2} />password</span>}
             {expiry && <span className="tag exp-t"><I.Clock size={11} width={2} />{expiry.label}</span>}
             {!slug && !password && !expiry && (
-              <span className="tag">sans expiration, sans mot de passe</span>
+              <span className="tag">no expiry, no password</span>
             )}
           </div>
           <div className="result-new">
             <button onClick={reset}>
               <I.Plus size={13} width={2} />
-              Raccourcir un autre lien
+              Shorten another link
             </button>
           </div>
         </div>
@@ -607,9 +607,9 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
             <b>{created?.slug}</b>
           </div>
           <div className="qr-acts">
-            <button className="ra-ghost" onClick={() => setStep('result')}>Retour</button>
+            <button className="ra-ghost" onClick={() => setStep('result')}>Back</button>
             <button className="ra-main" onClick={() => created && onShowQrFull(created)}>
-              Plein écran
+              Full screen
             </button>
           </div>
         </div>
@@ -645,7 +645,7 @@ function hostOf(url: string) {
   try {
     return new URL(url).host.replace(/^www\./, '')
   } catch {
-    return 'Lien prêt'
+    return 'Link ready'
   }
 }
 

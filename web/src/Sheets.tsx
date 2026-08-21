@@ -36,7 +36,7 @@ function Spark({ series }: { series: number[] }) {
   )
 }
 
-// ---------------------------------------------------------------- liste
+// ---------------------------------------------------------------- list
 
 type LinksSheetProps = {
   open: boolean
@@ -62,18 +62,18 @@ export function LinksSheet({ open, links, onOpenDetail, onClose, onQrFull, onToa
 
   const copyRow = async (link: Link) => {
     const ok = await copyText(link.short_url)
-    if (!ok) return onToast('Votre navigateur a bloqué le presse-papier', true)
+    if (!ok) return onToast('Your browser blocked the clipboard', true)
     setCopiedId(link.id)
     window.setTimeout(() => setCopiedId(null), 900)
   }
 
   return (
-    <div className={`sheet${open ? ' on' : ''}`} role="dialog" aria-label="Liens">
+    <div className={`sheet${open ? ' on' : ''}`} role="dialog" aria-label="Links">
       <div className="grip" />
       <div className="sheet-head">
-        <h2>Liens</h2>
+        <h2>Links</h2>
         <span className="n tnum">{links.length}</span>
-        <button className="sheet-close" onClick={onClose} aria-label="Fermer">
+        <button className="sheet-close" onClick={onClose} aria-label="Close">
           <I.X size={16} width={1.9} />
         </button>
       </div>
@@ -83,12 +83,12 @@ export function LinksSheet({ open, links, onOpenDetail, onClose, onQrFull, onToa
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Rechercher un lien"
+            placeholder="Search links"
             autoComplete="off"
           />
         </label>
         <div className="filters">
-          {([['all', 'Tous'], ['live', 'Actifs'], ['expired', 'Expirés']] as const).map(([key, label]) => (
+          {([['all', 'All'], ['live', 'Live'], ['expired', 'Expired']] as const).map(([key, label]) => (
             <button key={key} className={filter === key ? 'sel' : ''} onClick={() => setFilter(key)}>
               {label}
             </button>
@@ -98,7 +98,7 @@ export function LinksSheet({ open, links, onOpenDetail, onClose, onQrFull, onToa
       <div className="rows">
         {visible.length === 0 && (
           <div className="empty-note">
-            {links.length === 0 ? 'Aucun lien pour l’instant.' : 'Aucun lien ne correspond.'}
+            {links.length === 0 ? 'No links yet.' : 'No links match that.'}
           </div>
         )}
         {visible.map((l) => {
@@ -118,7 +118,7 @@ export function LinksSheet({ open, links, onOpenDetail, onClose, onQrFull, onToa
               </span>
               <span className="r-dest">{destLabel(l.dest)}</span>
               <span className="r-meta">
-                <span className="r-when">{l.disabled ? 'désactivé' : relative(l.expires_at)}</span>
+                <span className="r-when">{l.disabled ? 'disabled' : relative(l.expires_at)}</span>
                 <span className="r-opens">
                   <I.Out size={12} />
                   {l.clicks}
@@ -126,13 +126,13 @@ export function LinksSheet({ open, links, onOpenDetail, onClose, onQrFull, onToa
               </span>
               <span className="row-acts" onClick={(e) => e.stopPropagation()}>
                 <button
-                  aria-label="Copier"
+                  aria-label="Copy"
                   style={copiedId === l.id ? { color: 'var(--ok)' } : undefined}
                   onClick={() => void copyRow(l)}
                 >
                   {copiedId === l.id ? <I.Check size={14} width={2.2} /> : <I.Copy size={14} width={1.8} />}
                 </button>
-                <button aria-label="Code QR" onClick={() => onQrFull(l)}>
+                <button aria-label="QR code" onClick={() => onQrFull(l)}>
                   <I.Qr size={14} width={1.7} />
                 </button>
               </span>
@@ -144,7 +144,7 @@ export function LinksSheet({ open, links, onOpenDetail, onClose, onQrFull, onToa
   )
 }
 
-// ---------------------------------------------------------------- détail
+// ---------------------------------------------------------------- detail
 
 type DetailSheetProps = {
   open: boolean
@@ -174,7 +174,7 @@ export function DetailSheet({ open, link, from, onBack, onChanged, onToast }: De
     try {
       onChanged(await run())
     } catch (err) {
-      onToast(err instanceof ApiError ? err.message : 'Action impossible', true)
+      onToast(err instanceof ApiError ? err.message : 'That did not work', true)
     } finally {
       setPending(null)
     }
@@ -183,10 +183,10 @@ export function DetailSheet({ open, link, from, onBack, onChanged, onToast }: De
   const dead = link.expired || link.disabled
 
   return (
-    <div className={`sheet auto${open ? ' on' : ''}`} role="dialog" aria-label="Détail du lien">
+    <div className={`sheet auto${open ? ' on' : ''}`} role="dialog" aria-label="Link detail">
       <div className="grip" />
       <div className="detail-head">
-        <button className="back" onClick={onBack} aria-label={from === 'list' ? 'Retour aux liens' : 'Fermer'}>
+        <button className="back" onClick={onBack} aria-label={from === 'list' ? 'Back to links' : 'Close'}>
           {from === 'list' ? <I.Back size={17} width={1.9} /> : <I.X size={17} width={1.9} />}
         </button>
         <span className="t">
@@ -197,37 +197,37 @@ export function DetailSheet({ open, link, from, onBack, onChanged, onToast }: De
       <div className={`detail-body${pending ? ' busy' : ''}`}>
         <div className="stats-strip">
           <div className="stat-tile">
-            <div className="k">Ouvertures</div>
+            <div className="k">Opens</div>
             <div className="v">{link.clicks}</div>
-            {link.clicks ? <Spark series={link.series} /> : <span className="sub">rien encore</span>}
+            {link.clicks ? <Spark series={link.series} /> : <span className="sub">nothing yet</span>}
           </div>
           <div className="stat-tile">
-            <div className="k">Personnes</div>
+            <div className="k">People</div>
             <div className="v">{link.uniques}</div>
             <span className="sub">
-              {link.clicks ? `${Math.round((link.uniques / link.clicks) * 100)} % du total` : 'rien encore'}
+              {link.clicks ? `${Math.round((link.uniques / link.clicks) * 100)}% of opens` : 'nothing yet'}
             </span>
           </div>
           <div className="stat-tile">
-            <div className="k">Créé</div>
+            <div className="k">Created</div>
             <div className="v sm">{shortDate(link.created_at)}</div>
             <span className="sub">{age(link.created_at)}</span>
           </div>
         </div>
 
-        <div className="sec-title">Lien</div>
+        <div className="sec-title">Link</div>
         <div className="sec">
           <div className="sec-row">
-            <span className="k">Lien court</span>
+            <span className="k">Short link</span>
             <span className="v mono">{link.short_url.replace(/^https:\/\//, '')}</span>
             <button
               className="mini"
               onClick={async () => {
                 const ok = await copyText(link.short_url)
-                onToast(ok ? 'Lien copié' : 'Votre navigateur a bloqué le presse-papier', !ok)
+                onToast(ok ? 'Link copied' : 'Your browser blocked the clipboard', !ok)
               }}
             >
-              Copier
+              Copy
             </button>
           </div>
           <div className="sec-row">
@@ -236,22 +236,22 @@ export function DetailSheet({ open, link, from, onBack, onChanged, onToast }: De
             <button
               className="mini"
               onClick={() => {
-                const next = window.prompt('Nouvelle destination', link.dest)
+                const next = window.prompt('New destination', link.dest)
                 if (next && next !== link.dest) {
                   void act('dest', () => api.updateLink(link.id, { dest: next }))
                 }
               }}
             >
-              Modifier
+              Change
             </button>
           </div>
           <div className="sec-row">
-            <span className="k">Slug additionnel</span>
+            <span className="k">Extra slug</span>
             <span className="v" style={{ color: link.aliases.length ? undefined : 'var(--ink-3)' }}>
-              {link.aliases.length ? link.aliases.map((a) => `/${a.slug}`).join(' · ') : 'aucun'}
+              {link.aliases.length ? link.aliases.map((a) => `/${a.slug}`).join(' · ') : 'none'}
             </span>
             <button className="mini accent" onClick={() => setAddingAlias((v) => !v)}>
-              {addingAlias ? 'Fermer' : 'Ajouter'}
+              {addingAlias ? 'Close' : 'Add'}
             </button>
           </div>
           {addingAlias && (
@@ -259,7 +259,7 @@ export function DetailSheet({ open, link, from, onBack, onChanged, onToast }: De
               <input
                 value={aliasDraft}
                 onChange={(e) => setAliasDraft(e.target.value)}
-                placeholder="autre-slug"
+                placeholder="another-slug"
                 autoComplete="off"
                 spellCheck={false}
               />
@@ -275,17 +275,17 @@ export function DetailSheet({ open, link, from, onBack, onChanged, onToast }: De
                   })
                 }
               >
-                Ajouter
+                Add
               </button>
             </div>
           )}
         </div>
 
-        <div className="sec-title">Accès</div>
+        <div className="sec-title">Access</div>
         <div className="sec">
           <div className="sec-row">
-            <span className="k">Mot de passe</span>
-            <span className="v">{link.has_password ? 'Activé' : 'Désactivé'}</span>
+            <span className="k">Password</span>
+            <span className="v">{link.has_password ? 'On' : 'Off'}</span>
             <button
               className="mini"
               onClick={() => {
@@ -293,29 +293,29 @@ export function DetailSheet({ open, link, from, onBack, onChanged, onToast }: De
                   void act('pass', () => api.updateLink(link.id, { password: '' }))
                   return
                 }
-                const next = window.prompt('Mot de passe pour ce lien')
+                const next = window.prompt('Password for this link')
                 if (next) void act('pass', () => api.updateLink(link.id, { password: next }))
               }}
             >
-              {link.has_password ? 'Retirer' : 'Définir'}
+              {link.has_password ? 'Remove' : 'Set'}
             </button>
           </div>
           <div className="sec-row">
-            <span className="k">Expiration</span>
+            <span className="k">Expires</span>
             <span className="v" style={dead ? { color: 'var(--danger)' } : undefined}>
-              {link.disabled ? 'désactivé' : relative(link.expires_at)}
+              {link.disabled ? 'disabled' : relative(link.expires_at)}
             </span>
             <ExpiryButton link={link} dead={dead} onAct={act} />
           </div>
         </div>
 
-        <div className="sec-title">Suppression</div>
+        <div className="sec-title">Deletion</div>
         <div className="sec">
           <div className="sec-row wide">
             <span className="v">
               {confirmDelete
-                ? 'Confirmez : le lien cessera de fonctionner immédiatement.'
-                : 'Le lien cesse de fonctionner et son slug ne sera jamais réattribué.'}
+                ? 'Confirm: the link stops working immediately.'
+                : 'The link stops working and its slug is never handed out again.'}
             </span>
             <button
               className="mini warn"
@@ -327,7 +327,7 @@ export function DetailSheet({ open, link, from, onBack, onChanged, onToast }: De
                 })
               }}
             >
-              {confirmDelete ? 'Confirmer' : 'Supprimer'}
+              {confirmDelete ? 'Confirm' : 'Delete'}
             </button>
           </div>
         </div>
@@ -349,7 +349,7 @@ function ExpiryButton({
   if (!open) {
     return (
       <button className={`mini${dead ? ' accent' : ''}`} onClick={() => setOpen(true)}>
-        {dead ? 'Réactiver' : 'Modifier'}
+        {dead ? 'Revive' : 'Change'}
       </button>
     )
   }
@@ -366,17 +366,17 @@ function ExpiryButton({
     <span className="acts" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
       {EXPIRY_PRESETS.map((p) => (
         <button key={p.key} className="mini" style={{ minWidth: 0 }} onClick={() => set(p.key)}>
-          {p.label.replace('Dans ', '+').replace('Fin de journée', 'ce soir')}
+          {p.label.replace('In ', '+').replace('End of today', 'tonight')}
         </button>
       ))}
       <button className="mini" style={{ minWidth: 0 }} onClick={() => set('never')}>
-        jamais
+        never
       </button>
     </span>
   )
 }
 
-// ---------------------------------------------------------------- réglages
+// ---------------------------------------------------------------- settings
 
 type SettingsSheetProps = {
   open: boolean
@@ -414,7 +414,7 @@ export function SettingsSheet({
     try {
       await run()
     } catch (err) {
-      onToast(err instanceof ApiError ? err.message : 'Action impossible', true)
+      onToast(err instanceof ApiError ? err.message : 'That did not work', true)
     } finally {
       setBusy(false)
     }
@@ -426,29 +426,29 @@ export function SettingsSheet({
     })
 
   return (
-    <div className={`sheet auto${open ? ' on' : ''}`} role="dialog" aria-label="Réglages">
+    <div className={`sheet auto${open ? ' on' : ''}`} role="dialog" aria-label="Settings">
       <div className="grip" />
       <div className="detail-head">
-        <button className="back" onClick={onClose} aria-label="Fermer">
+        <button className="back" onClick={onClose} aria-label="Close">
           <I.X size={17} width={1.9} />
         </button>
         <span className="t">
-          <span className="s">Réglages</span>
+          <span className="s">Settings</span>
           <span className="d">{user.email || user.name}</span>
         </span>
       </div>
       <div className={`detail-body${busy ? ' busy' : ''}`}>
-        <div className="sec-title">Domaines</div>
+        <div className="sec-title">Domains</div>
         <div className="sec set-domains">
           {domains.map((d) => (
             <div className="domain-row" key={d.id}>
               <span className="host">{d.host}</span>
               <span className="tagline">
-                {d.is_default ? 'utilisé pour les nouveaux liens' : 'disponible'}
+                {d.is_default ? 'used for new links' : 'available'}
               </span>
               <span className="acts">
                 {d.is_default ? (
-                  <span className="badge">défaut</span>
+                  <span className="badge">default</span>
                 ) : (
                   <>
                     <button
@@ -458,12 +458,12 @@ export function SettingsSheet({
                         await refreshDomains()
                       })}
                     >
-                      Par défaut
+                      Make default
                     </button>
                     <button
                       className="mini warn"
                       style={{ minWidth: 0 }}
-                      aria-label={`Retirer ${d.host}`}
+                      aria-label={`Remove ${d.host}`}
                       onClick={() => guard(async () => {
                         await api.deleteDomain(d.id)
                         await refreshDomains()
@@ -491,23 +491,23 @@ export function SettingsSheet({
                 await api.addDomain(host.trim())
                 setHost('')
                 await refreshDomains()
-                onToast('Domaine ajouté. Faites-le pointer vers ce serveur.')
+                onToast('Domain added. Point it at this server too.')
               })}
             >
-              Ajouter
+              Add
             </button>
           </div>
         </div>
         <p className="empty-note" style={{ padding: '0 2px', textAlign: 'left', fontSize: 11.5 }}>
-          Un domaine ajouté ici doit aussi pointer vers ce serveur et avoir son
-          certificat. Les liens déjà créés gardent le domaine sur lequel ils sont nés.
+          A domain added here also has to point at this server and have a certificate.
+          Links already made keep the domain they were created on.
         </p>
 
-        <div className="sec-title">Nouveaux liens</div>
+        <div className="sec-title">New links</div>
         <div className="sec">
           <div className="sec-row">
-            <span className="k">Longueur du code</span>
-            <span className="v mono">{settings.slug_length} caractères</span>
+            <span className="k">Code length</span>
+            <span className="v mono">{settings.slug_length} characters</span>
             <span className="acts" style={{ display: 'flex', gap: 6 }}>
               <button
                 className="mini"
@@ -528,9 +528,9 @@ export function SettingsSheet({
             </span>
           </div>
           <div className="sec-row wide" style={{ display: 'block' }}>
-            <div className="k" style={{ marginBottom: 8 }}>Expiration par défaut</div>
+            <div className="k" style={{ marginBottom: 8 }}>Default expiry</div>
             <div className="seg">
-              {([['never', 'Jamais'], ['today', 'Ce soir'], ['7d', '7 jours'], ['30d', '30 jours']] as const).map(
+              {([['never', 'Never'], ['today', 'Tonight'], ['7d', '7 days'], ['30d', '30 days']] as const).map(
                 ([key, label]) => (
                   <button
                     key={key}
@@ -544,39 +544,39 @@ export function SettingsSheet({
             </div>
           </div>
           <div className="sec-row">
-            <span className="k">Copier après création</span>
+            <span className="k">Copy after creating</span>
             <span className="v" style={{ color: 'var(--ink-3)', fontSize: 11.5 }}>
-              Le lien part directement dans le presse-papier.
+              The link goes straight to your clipboard.
             </span>
             <button
               className={`switch${settings.auto_copy ? ' on' : ''}`}
               role="switch"
               aria-checked={settings.auto_copy}
-              aria-label="Copier après création"
+              aria-label="Copy after creating"
               onClick={() => save({ ...settings, auto_copy: !settings.auto_copy })}
             />
           </div>
           <div className="sec-row">
-            <span className="k">Coller à l’ouverture</span>
+            <span className="k">Paste on open</span>
             <span className="v" style={{ color: 'var(--ink-3)', fontSize: 11.5 }}>
-              Là où le navigateur l’autorise.
+              Where the browser allows it.
             </span>
             <button
               className={`switch${settings.auto_paste ? ' on' : ''}`}
               role="switch"
               aria-checked={settings.auto_paste}
-              aria-label="Coller à l’ouverture"
+              aria-label="Paste on open"
               onClick={() => save({ ...settings, auto_paste: !settings.auto_paste })}
             />
           </div>
         </div>
 
-        <div className="sec-title">Compte</div>
+        <div className="sec-title">Account</div>
         <div className="sec">
           <div className="sec-row">
-            <span className="k">Connecté</span>
+            <span className="k">Signed in</span>
             <span className="v">{user.name || user.email}</span>
-            <button className="mini warn" onClick={onSignOut}>Déconnexion</button>
+            <button className="mini warn" onClick={onSignOut}>Sign out</button>
           </div>
         </div>
       </div>

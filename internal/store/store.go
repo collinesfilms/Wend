@@ -42,9 +42,9 @@ func Open(path string) (*Store, error) {
 		// Bind-mounting a host directory that the container user cannot write
 		// is the usual cause, and the driver's own message does not say so.
 		return nil, fmt.Errorf(
-			"impossible d'ouvrir la base %s : %w\n"+
-				"Si le dossier est monté depuis l'hôte, il doit appartenir à "+
-				"l'utilisateur du conteneur : chown -R 10001:10001 <dossier>",
+			"cannot open the database at %s: %w\n"+
+				"If that directory is bind-mounted from the host it has to belong "+
+				"to the container user: chown -R 10001:10001 <directory>",
 			path, err)
 	}
 	return &Store{db: db}, nil

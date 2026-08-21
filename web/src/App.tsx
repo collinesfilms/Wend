@@ -48,7 +48,7 @@ export default function App() {
       setLinks(await api.links())
     } catch (err) {
       if (!(err instanceof ApiError && err.status === 401)) {
-        showToast('Liens indisponibles', true)
+        showToast('Could not load your links', true)
       }
     }
   }, [showToast])
@@ -69,8 +69,8 @@ export default function App() {
     })()
   }, [loadLinks])
 
-  // The dashboard and the detail are two sheets: one retracts while the other
-  // rises, with just enough stagger for the hand-off to read.
+  // The list and the detail are two sheets: one retracts while the other rises,
+  // with just enough stagger for the hand-off to read.
   const openSheet = (next: Sheet) => {
     if (sheet !== 'none' && sheet !== next) {
       setSheet('none')
@@ -129,7 +129,7 @@ export default function App() {
   }
 
   if (loading) {
-    return <div className="spinner-page">Chargement…</div>
+    return <div className="spinner-page">Loading…</div>
   }
 
   if (!user || !settings) {
@@ -146,10 +146,10 @@ export default function App() {
           <button
             className={`chip-btn${links.length === 0 ? ' hidden' : ''}`}
             onClick={() => openSheet('links')}
-            aria-label="Ouvrir le tableau de bord"
+            aria-label="Open the link list"
           >
             <I.Rows size={14} width={1.8} />
-            Liens <span className="count tnum">{links.length}</span>
+            Links <span className="count tnum">{links.length}</span>
           </button>
         </div>
 
@@ -158,21 +158,21 @@ export default function App() {
           <button
             className={`icon-btn theme${signOutOpen ? ' hidden' : ''}`}
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            aria-label={theme === 'dark' ? 'Passer en clair' : 'Passer en sombre'}
+            aria-label={theme === 'dark' ? 'Switch to light' : 'Switch to dark'}
           >
             {theme === 'dark' ? <I.Sun size={16} /> : <I.Moon size={16} />}
           </button>
           <button
             className={`icon-btn${signOutOpen ? ' hidden' : ''}`}
             onClick={() => openSheet('settings')}
-            aria-label="Réglages"
+            aria-label="Settings"
           >
             <I.Gear size={16} />
           </button>
           <div className="avatar-wrap">
             <button
               className={`avatar${signOutOpen ? ' hidden' : ''}`}
-              aria-label="Compte"
+              aria-label="Account"
               onClick={(e) => {
                 e.stopPropagation()
                 setSignOutOpen(true)
@@ -187,7 +187,7 @@ export default function App() {
                 void signOut()
               }}
             >
-              <span>Déconnexion</span>
+              <span>Sign out</span>
             </button>
           </div>
         </div>
@@ -226,7 +226,7 @@ export default function App() {
         onChanged={(updated) => {
           void loadLinks()
           if (updated === null) {
-            showToast('Lien supprimé')
+            showToast('Link deleted')
             backFromDetail()
           }
         }}
@@ -252,7 +252,7 @@ export default function App() {
           {qrFull ? `${qrFull.host}/` : ''}
           <b>{qrFull?.slug}</b>
         </div>
-        <div className="qr-full-hint">Touchez pour fermer</div>
+        <div className="qr-full-hint">Tap anywhere to close</div>
       </div>
 
       <div className={`toast${toast ? ' on' : ''}${toast?.bad ? ' bad' : ''}`} role="status">
@@ -271,14 +271,15 @@ function SignIn({ error }: { error: string | null }) {
             <I.Key size={24} />
           </span>
           <h1>Collines Go</h1>
-          <p>Les liens de collines. Connectez-vous avec le compte qui y a accès.</p>
+          <p>Sign in with the account that has been granted access.</p>
           <button className="big-act" onClick={() => { window.location.href = '/auth/login' }}>
             <I.Key size={18} />
-            Continuer avec PocketID
+            Continue with PocketID
           </button>
           {error && <div className="fine" style={{ color: 'var(--danger)' }}>{error}</div>}
           <div className="fine">
-            Il n’y a rien à créer ici. L’accès est accordé dans PocketID, et révoqué au même endroit.
+            There is nothing to sign up for. Access is granted in your identity provider,
+            and revoked there too.
           </div>
         </div>
       </div>

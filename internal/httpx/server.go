@@ -34,11 +34,11 @@ func New(cfg *config.Config, st *store.Store, sessions *auth.Sessions, oidc *aut
 	// missing, and it says so.
 	index, err := fs.ReadFile(assets, "index.html")
 	if err != nil {
-		index = []byte(`<!doctype html><meta charset="utf-8"><title>Collines Go</title>` +
+		index = []byte(`<!doctype html><meta charset="utf-8"><title>Link shortener</title>` +
 			`<p style="font:15px system-ui;margin:3rem auto;max-width:34rem">` +
-			`L’interface n’a pas été compilée. Lancez ` +
+			`The interface has not been built. Run ` +
 			`<code>npm --prefix web ci &amp;&amp; npm --prefix web run build</code> ` +
-			`puis reconstruisez le binaire. Les redirections fonctionnent déjà.</p>`)
+			`and rebuild the binary. Redirects already work.</p>`)
 	}
 	return &Server{
 		cfg:       cfg,

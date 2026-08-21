@@ -117,17 +117,17 @@ func (a *OIDC) Login(w http.ResponseWriter, r *http.Request) {
 // Callback completes the flow and issues a session.
 func (a *OIDC) Callback(w http.ResponseWriter, r *http.Request) {
 	if e := r.URL.Query().Get("error"); e != "" {
-		a.fail(w, r, "PocketID a refusé la connexion ("+e+").")
+		a.fail(w, r, "Your identity provider refused the sign-in ("+e+").")
 		return
 	}
 	stateC, err := r.Cookie(stateCookie)
 	if err != nil || stateC.Value == "" || stateC.Value != r.URL.Query().Get("state") {
-		a.fail(w, r, "La demande de connexion a expiré. Réessayez.")
+		a.fail(w, r, "That sign-in request expired. Try again.")
 		return
 	}
 	pkceC, err := r.Cookie(pkceCookie)
 	if err != nil {
-		a.fail(w, r, "La demande de connexion a expiré. Réessayez.")
+		a.fail(w, r, "That sign-in request expired. Try again.")
 		return
 	}
 	http.SetCookie(w, a.sessions.cookie(stateCookie, "", -1))
@@ -136,17 +136,17 @@ func (a *OIDC) Callback(w http.ResponseWriter, r *http.Request) {
 	tok, err := a.oauth.Exchange(r.Context(), r.URL.Query().Get("code"),
 		oauth2.VerifierOption(pkceC.Value))
 	if err != nil {
-		a.fail(w, r, "Échange du code impossible.")
+		a.fail(w, r, "Could not exchange the authorization code.")
 		return
 	}
 	rawID, ok := tok.Extra("id_token").(string)
 	if !ok {
-		a.fail(w, r, "Le fournisseur n’a pas renvoyé de jeton d’identité.")
+		a.fail(w, r, "The provider returned no identity token.")
 		return
 	}
 	idToken, err := a.verifier.Verify(r.Context(), rawID)
 	if err != nil {
-		a.fail(w, r, "Jeton d’identité invalide.")
+		a.fail(w, r, "That identity token is not valid.")
 		return
 	}
 	var claims struct {
@@ -165,12 +165,12 @@ func (a *OIDC) Callback(w http.ResponseWriter, r *http.Request) {
 	}
 	user := store.User{ID: idToken.Subject, Email: claims.Email, Name: name}
 	if err := a.st.UpsertUser(r.Context(), user); err != nil {
-		a.fail(w, r, "Impossible d’enregistrer le compte.")
+		a.fail(w, r, "Could not record the account.")
 		return
 	}
 
 	if err := a.sessions.Issue(r.Context(), w, user.ID); err != nil {
-		a.fail(w, r, "Impossible de créer la session.")
+		a.fail(w, r, "Could not create the session.")
 		return
 	}
 	http.Redirect(w, r, "/", http.StatusFound)
@@ -250,7 +250,7 @@ func (a *Sessions) Require(next http.Handler) http.Handler {
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			w.WriteHeader(http.StatusUnauthorized)
-			_, _ = w.Write([]byte(`{"error":"non authentifié"}`))
+			_, _ = w.Write([]byte(`{"error":"not signed in"}`))
 			return
 		}
 		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), ctxKey{}, u)))

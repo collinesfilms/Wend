@@ -1,13 +1,18 @@
 {
   "name": "Collines Go",
   "short_name": "Go",
-  "description": "Raccourcisseur de liens de Collines",
+  "description": "Self-hosted link shortener",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#ECEEEA",
   "theme_color": "#ECEEEA",
   "icons": [
-    { "src": "/_/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+    {
+      "src": "/_/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
   ]
 }

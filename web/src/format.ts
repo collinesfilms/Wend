@@ -1,8 +1,8 @@
-// Date and label formatting, in French.
+// Date and label formatting.
 
-const rtf = new Intl.RelativeTimeFormat('fr', { numeric: 'auto' })
-const dateFmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' })
-const dateTimeFmt = new Intl.DateTimeFormat('fr-FR', {
+const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' })
+const dateFmt = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' })
+const dateTimeFmt = new Intl.DateTimeFormat(undefined, {
   day: 'numeric',
   month: 'long',
   hour: '2-digit',
@@ -11,11 +11,11 @@ const dateTimeFmt = new Intl.DateTimeFormat('fr-FR', {
 
 const DAY = 86_400_000
 
-/** "dans 5 jours", "il y a 3 jours", "jamais". */
+/** "in 5 days", "3 days ago", "never". */
 export function relative(iso: string | null): string {
-  if (!iso) return 'jamais'
+  if (!iso) return 'never'
   const then = new Date(iso).getTime()
-  if (Number.isNaN(then)) return 'jamais'
+  if (Number.isNaN(then)) return 'never'
   const diff = then - Date.now()
   const days = Math.round(diff / DAY)
   if (Math.abs(days) >= 1) return rtf.format(days, 'day')
@@ -34,14 +34,14 @@ export function longDateTime(iso: string): string {
   return Number.isNaN(d.getTime()) ? '—' : dateTimeFmt.format(d)
 }
 
-/** How long ago the link was made: "il y a 12 jours". */
+/** How long ago the link was made: "12 days ago". */
 export function age(iso: string): string {
   const then = new Date(iso).getTime()
   if (Number.isNaN(then)) return ''
   const days = Math.round((then - Date.now()) / DAY)
   if (days === 0) {
     const hours = Math.round((then - Date.now()) / 3_600_000)
-    if (hours === 0) return "à l’instant"
+    if (hours === 0) return 'just now'
     return rtf.format(hours, 'hour')
   }
   return rtf.format(days, 'day')
@@ -58,10 +58,10 @@ export function destLabel(raw: string): string {
 }
 
 export const EXPIRY_PRESETS = [
-  { key: '1h', label: 'Dans 1 heure', short: 'dans 1 heure' },
-  { key: 'today', label: 'Fin de journée', short: 'fin de journée' },
-  { key: '7d', label: 'Dans 7 jours', short: 'dans 7 jours' },
-  { key: '30d', label: 'Dans 30 jours', short: 'dans 30 jours' },
+  { key: '1h', label: 'In 1 hour', short: 'in 1 hour' },
+  { key: 'today', label: 'End of today', short: 'end of today' },
+  { key: '7d', label: 'In 7 days', short: 'in 7 days' },
+  { key: '30d', label: 'In 30 days', short: 'in 30 days' },
 ] as const
 
 export type ExpiryKey = (typeof EXPIRY_PRESETS)[number]['key']

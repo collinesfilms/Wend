@@ -74,11 +74,12 @@ export function randomSlug(length: number): string {
 }
 
 const PASS_WORDS = [
-  'chambre', 'diaphragme', 'argentique', 'gelatine', 'obturateur',
-  'soufflet', 'negatif', 'emulsion', 'trepied', 'revelateur',
+  'anchor', 'basalt', 'cedar', 'cobalt', 'ember',
+  'harbor', 'lantern', 'meadow', 'pebble', 'quartz',
+  'ripple', 'saffron', 'timber', 'walnut', 'willow',
 ]
 
-/** A password you can read out to a class without repeating it three times. */
+/** A password you can read out loud without repeating it three times. */
 export function suggestPassword(): string {
   const bytes = new Uint8Array(2)
   crypto.getRandomValues(bytes)

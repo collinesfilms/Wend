@@ -104,17 +104,17 @@ func (s *Server) handleGetSettings(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handlePutSettings(w http.ResponseWriter, r *http.Request) {
 	var in appSettings
 	if err := readJSON(r, &in); err != nil {
-		writeErr(w, http.StatusBadRequest, "requête illisible")
+		writeErr(w, http.StatusBadRequest, "could not read that request")
 		return
 	}
 	if in.SlugLength < 4 || in.SlugLength > 12 {
-		writeErr(w, http.StatusBadRequest, "la longueur du code doit être entre 4 et 12")
+		writeErr(w, http.StatusBadRequest, "code length must be between 4 and 12")
 		return
 	}
 	switch in.DefaultExpiry {
 	case "never", "1h", "today", "7d", "30d":
 	default:
-		writeErr(w, http.StatusBadRequest, "expiration par défaut inconnue")
+		writeErr(w, http.StatusBadRequest, "unknown default expiry")
 		return
 	}
 	ctx := r.Context()
@@ -138,7 +138,7 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 	u, _ := auth.UserFrom(r.Context())
 	domains, err := s.st.Domains(r.Context())
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "domaines indisponibles")
+		writeErr(w, http.StatusInternalServerError, "could not load the domains")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
@@ -155,23 +155,23 @@ func (s *Server) handleAddDomain(w http.ResponseWriter, r *http.Request) {
 		Host string `json:"host"`
 	}
 	if err := readJSON(r, &in); err != nil {
-		writeErr(w, http.StatusBadRequest, "requête illisible")
+		writeErr(w, http.StatusBadRequest, "could not read that request")
 		return
 	}
 	host := strings.ToLower(strings.TrimSpace(in.Host))
 	host = strings.TrimPrefix(strings.TrimPrefix(host, "https://"), "http://")
 	host = strings.Trim(host, "/")
 	if host == "" || !strings.Contains(host, ".") || strings.ContainsAny(host, " /:?#") {
-		writeErr(w, http.StatusBadRequest, "domaine invalide")
+		writeErr(w, http.StatusBadRequest, "that domain is not valid")
 		return
 	}
 	d, err := s.st.AddDomain(r.Context(), host)
 	if err != nil {
 		if strings.Contains(err.Error(), "UNIQUE") {
-			writeErr(w, http.StatusConflict, "ce domaine est déjà enregistré")
+			writeErr(w, http.StatusConflict, "that domain is already registered")
 			return
 		}
-		writeErr(w, http.StatusInternalServerError, "impossible d’ajouter le domaine")
+		writeErr(w, http.StatusInternalServerError, "could not add the domain")
 		return
 	}
 	writeJSON(w, http.StatusCreated, d)
@@ -180,11 +180,11 @@ func (s *Server) handleAddDomain(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleDefaultDomain(w http.ResponseWriter, r *http.Request) {
 	id, ok := pathID(r, "id")
 	if !ok {
-		writeErr(w, http.StatusBadRequest, "identifiant invalide")
+		writeErr(w, http.StatusBadRequest, "invalid identifier")
 		return
 	}
 	if err := s.st.SetDefaultDomain(r.Context(), id); err != nil {
-		writeErr(w, http.StatusInternalServerError, "impossible de changer le domaine par défaut")
+		writeErr(w, http.StatusInternalServerError, "could not change the default domain")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -193,7 +193,7 @@ func (s *Server) handleDefaultDomain(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 	id, ok := pathID(r, "id")
 	if !ok {
-		writeErr(w, http.StatusBadRequest, "identifiant invalide")
+		writeErr(w, http.StatusBadRequest, "invalid identifier")
 		return
 	}
 	if err := s.st.DeleteDomain(r.Context(), id); err != nil {
@@ -209,7 +209,7 @@ func (s *Server) handleListLinks(w http.ResponseWriter, r *http.Request) {
 	u, _ := auth.UserFrom(r.Context())
 	links, err := s.st.List(r.Context(), u.ID)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "liens indisponibles")
+		writeErr(w, http.StatusInternalServerError, "could not load the links")
 		return
 	}
 	writeJSON(w, http.StatusOK, links)
@@ -220,7 +220,7 @@ func (s *Server) handleCheckSlug(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		d, err := s.st.DefaultDomain(r.Context())
 		if err != nil {
-			writeErr(w, http.StatusInternalServerError, "aucun domaine configuré")
+			writeErr(w, http.StatusInternalServerError, "no domain configured")
 			return
 		}
 		domainID = d.ID
@@ -233,7 +233,7 @@ func (s *Server) handleCheckSlug(w http.ResponseWriter, r *http.Request) {
 	case errors.Is(err, store.ErrSlugInvalid):
 		writeJSON(w, http.StatusOK, map[string]any{"available": false, "reason": "invalid"})
 	case err != nil:
-		writeErr(w, http.StatusInternalServerError, "vérification impossible")
+		writeErr(w, http.StatusInternalServerError, "could not check that slug")
 	default:
 		reason := ""
 		if !available {
@@ -255,12 +255,12 @@ func (s *Server) handleCreateLink(w http.ResponseWriter, r *http.Request) {
 	u, _ := auth.UserFrom(r.Context())
 	var in createLinkRequest
 	if err := readJSON(r, &in); err != nil {
-		writeErr(w, http.StatusBadRequest, "requête illisible")
+		writeErr(w, http.StatusBadRequest, "could not read that request")
 		return
 	}
 	dest, ok := validDest(in.Dest)
 	if !ok {
-		writeErr(w, http.StatusBadRequest, "destination invalide : une adresse http ou https est attendue")
+		writeErr(w, http.StatusBadRequest, "invalid destination: an http or https address is expected")
 		return
 	}
 
@@ -268,7 +268,7 @@ func (s *Server) handleCreateLink(w http.ResponseWriter, r *http.Request) {
 	if domainID == 0 {
 		d, err := s.st.DefaultDomain(r.Context())
 		if err != nil {
-			writeErr(w, http.StatusInternalServerError, "aucun domaine configuré")
+			writeErr(w, http.StatusInternalServerError, "no domain configured")
 			return
 		}
 		domainID = d.ID
@@ -276,7 +276,7 @@ func (s *Server) handleCreateLink(w http.ResponseWriter, r *http.Request) {
 
 	expires, err := parseExpiry(in.ExpiresAt)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "date d’expiration invalide")
+		writeErr(w, http.StatusBadRequest, "invalid expiry date")
 		return
 	}
 
@@ -284,7 +284,7 @@ func (s *Server) handleCreateLink(w http.ResponseWriter, r *http.Request) {
 	if in.Password != "" {
 		h, err := bcrypt.GenerateFromPassword([]byte(in.Password), bcrypt.DefaultCost)
 		if err != nil {
-			writeErr(w, http.StatusInternalServerError, "impossible de protéger le lien")
+			writeErr(w, http.StatusInternalServerError, "could not protect the link")
 			return
 		}
 		hash = string(h)
@@ -303,7 +303,7 @@ func (s *Server) handleCreateLink(w http.ResponseWriter, r *http.Request) {
 		for attempt := 0; attempt < 12; attempt++ {
 			slug, err := randomSlug(length + attempt/4)
 			if err != nil {
-				writeErr(w, http.StatusInternalServerError, "génération du code impossible")
+				writeErr(w, http.StatusInternalServerError, "could not generate a code")
 				return
 			}
 			create.Slug = slug
@@ -312,26 +312,26 @@ func (s *Server) handleCreateLink(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			if err != nil {
-				writeErr(w, http.StatusInternalServerError, "création impossible")
+				writeErr(w, http.StatusInternalServerError, "could not create the link")
 				return
 			}
 			writeJSON(w, http.StatusCreated, link)
 			return
 		}
-		writeErr(w, http.StatusInternalServerError, "impossible de trouver un code libre")
+		writeErr(w, http.StatusInternalServerError, "could not find a free code")
 		return
 	}
 
 	link, err := s.st.Create(r.Context(), create)
 	switch {
 	case errors.Is(err, store.ErrSlugTaken):
-		writeErr(w, http.StatusConflict, "ce slug est déjà utilisé")
+		writeErr(w, http.StatusConflict, "that slug is already in use")
 	case errors.Is(err, store.ErrSlugReserved):
-		writeErr(w, http.StatusConflict, "ce slug est réservé")
+		writeErr(w, http.StatusConflict, "that slug is reserved")
 	case errors.Is(err, store.ErrSlugInvalid):
-		writeErr(w, http.StatusBadRequest, "slug invalide")
+		writeErr(w, http.StatusBadRequest, "invalid slug")
 	case err != nil:
-		writeErr(w, http.StatusInternalServerError, "création impossible")
+		writeErr(w, http.StatusInternalServerError, "could not create the link")
 	default:
 		writeJSON(w, http.StatusCreated, link)
 	}
@@ -353,12 +353,12 @@ func (s *Server) handleGetLink(w http.ResponseWriter, r *http.Request) {
 	u, _ := auth.UserFrom(r.Context())
 	id, ok := pathID(r, "id")
 	if !ok {
-		writeErr(w, http.StatusBadRequest, "identifiant invalide")
+		writeErr(w, http.StatusBadRequest, "invalid identifier")
 		return
 	}
 	link, err := s.st.Link(r.Context(), id)
 	if err != nil || link.OwnerID != u.ID {
-		writeErr(w, http.StatusNotFound, "lien introuvable")
+		writeErr(w, http.StatusNotFound, "link not found")
 		return
 	}
 	writeJSON(w, http.StatusOK, link)
@@ -375,12 +375,12 @@ func (s *Server) handleUpdateLink(w http.ResponseWriter, r *http.Request) {
 	u, _ := auth.UserFrom(r.Context())
 	id, ok := pathID(r, "id")
 	if !ok {
-		writeErr(w, http.StatusBadRequest, "identifiant invalide")
+		writeErr(w, http.StatusBadRequest, "invalid identifier")
 		return
 	}
 	var in updateLinkRequest
 	if err := readJSON(r, &in); err != nil {
-		writeErr(w, http.StatusBadRequest, "requête illisible")
+		writeErr(w, http.StatusBadRequest, "could not read that request")
 		return
 	}
 
@@ -388,7 +388,7 @@ func (s *Server) handleUpdateLink(w http.ResponseWriter, r *http.Request) {
 	if in.Dest != nil {
 		dest, ok := validDest(*in.Dest)
 		if !ok {
-			writeErr(w, http.StatusBadRequest, "destination invalide")
+			writeErr(w, http.StatusBadRequest, "invalid destination")
 			return
 		}
 		upd.Dest = &dest
@@ -398,7 +398,7 @@ func (s *Server) handleUpdateLink(w http.ResponseWriter, r *http.Request) {
 		if *in.Password != "" {
 			h, err := bcrypt.GenerateFromPassword([]byte(*in.Password), bcrypt.DefaultCost)
 			if err != nil {
-				writeErr(w, http.StatusInternalServerError, "impossible de protéger le lien")
+				writeErr(w, http.StatusInternalServerError, "could not protect the link")
 				return
 			}
 			hash = string(h)
@@ -412,7 +412,7 @@ func (s *Server) handleUpdateLink(w http.ResponseWriter, r *http.Request) {
 		} else {
 			t, err := parseExpiry(in.ExpiresAt)
 			if err != nil {
-				writeErr(w, http.StatusBadRequest, "date d’expiration invalide")
+				writeErr(w, http.StatusBadRequest, "invalid expiry date")
 				return
 			}
 			upd.ExpiresAt = &t
@@ -421,12 +421,12 @@ func (s *Server) handleUpdateLink(w http.ResponseWriter, r *http.Request) {
 	upd.Disabled = in.Disabled
 
 	if err := s.st.Update(r.Context(), id, u.ID, upd); err != nil {
-		writeErr(w, http.StatusNotFound, "lien introuvable")
+		writeErr(w, http.StatusNotFound, "link not found")
 		return
 	}
 	link, err := s.st.Link(r.Context(), id)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "lien indisponible")
+		writeErr(w, http.StatusInternalServerError, "could not load the link")
 		return
 	}
 	writeJSON(w, http.StatusOK, link)
@@ -436,11 +436,11 @@ func (s *Server) handleDeleteLink(w http.ResponseWriter, r *http.Request) {
 	u, _ := auth.UserFrom(r.Context())
 	id, ok := pathID(r, "id")
 	if !ok {
-		writeErr(w, http.StatusBadRequest, "identifiant invalide")
+		writeErr(w, http.StatusBadRequest, "invalid identifier")
 		return
 	}
 	if err := s.st.Delete(r.Context(), id, u.ID); err != nil {
-		writeErr(w, http.StatusNotFound, "lien introuvable")
+		writeErr(w, http.StatusNotFound, "link not found")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -450,12 +450,12 @@ func (s *Server) handleAddAlias(w http.ResponseWriter, r *http.Request) {
 	u, _ := auth.UserFrom(r.Context())
 	id, ok := pathID(r, "id")
 	if !ok {
-		writeErr(w, http.StatusBadRequest, "identifiant invalide")
+		writeErr(w, http.StatusBadRequest, "invalid identifier")
 		return
 	}
 	link, err := s.st.Link(r.Context(), id)
 	if err != nil || link.OwnerID != u.ID {
-		writeErr(w, http.StatusNotFound, "lien introuvable")
+		writeErr(w, http.StatusNotFound, "link not found")
 		return
 	}
 	var in struct {
@@ -463,7 +463,7 @@ func (s *Server) handleAddAlias(w http.ResponseWriter, r *http.Request) {
 		DomainID int64  `json:"domain_id"`
 	}
 	if err := readJSON(r, &in); err != nil {
-		writeErr(w, http.StatusBadRequest, "requête illisible")
+		writeErr(w, http.StatusBadRequest, "could not read that request")
 		return
 	}
 	domainID := in.DomainID
@@ -472,13 +472,13 @@ func (s *Server) handleAddAlias(w http.ResponseWriter, r *http.Request) {
 	}
 	switch err := s.st.AddAlias(r.Context(), id, domainID, in.Slug); {
 	case errors.Is(err, store.ErrSlugTaken):
-		writeErr(w, http.StatusConflict, "ce slug est déjà utilisé")
+		writeErr(w, http.StatusConflict, "that slug is already in use")
 	case errors.Is(err, store.ErrSlugReserved):
-		writeErr(w, http.StatusConflict, "ce slug est réservé")
+		writeErr(w, http.StatusConflict, "that slug is reserved")
 	case errors.Is(err, store.ErrSlugInvalid):
-		writeErr(w, http.StatusBadRequest, "slug invalide")
+		writeErr(w, http.StatusBadRequest, "invalid slug")
 	case err != nil:
-		writeErr(w, http.StatusInternalServerError, "ajout impossible")
+		writeErr(w, http.StatusInternalServerError, "could not add that")
 	default:
 		updated, _ := s.st.Link(r.Context(), id)
 		writeJSON(w, http.StatusCreated, updated)

@@ -1,13 +1,13 @@
 services:
-  collinesgo:
+  shortener:
     image: ghcr.io/collinesfilms/shortify:latest
-    container_name: collinesgo
+    container_name: shortener
     restart: unless-stopped
     ports:
-      # Le proxy inverse de Synology envoie go.collines.co vers ce port.
+      # Point your reverse proxy at this port.
       - "9018:8080"
     volumes:
-      # Créez le dossier avant le premier démarrage et donnez-le au conteneur :
+      # Create the directory and give it to the container before the first run:
       #   mkdir -p data && sudo chown -R 10001:10001 data
       - ./data:/data
     env_file:
