@@ -39,7 +39,13 @@ func Open(path string) (*Store, error) {
 
 	if _, err := db.Exec(schema); err != nil {
 		db.Close()
-		return nil, fmt.Errorf("apply schema: %w", err)
+		// Bind-mounting a host directory that the container user cannot write
+		// is the usual cause, and the driver's own message does not say so.
+		return nil, fmt.Errorf(
+			"impossible d'ouvrir la base %s : %w\n"+
+				"Si le dossier est monté depuis l'hôte, il doit appartenir à "+
+				"l'utilisateur du conteneur : chown -R 10001:10001 <dossier>",
+			path, err)
 	}
 	return &Store{db: db}, nil
 }

@@ -7,6 +7,8 @@ services:
       # Le proxy inverse de Synology envoie go.collines.co vers ce port.
       - "9018:8080"
     volumes:
+      # Créez le dossier avant le premier démarrage et donnez-le au conteneur :
+      #   mkdir -p data && sudo chown -R 10001:10001 data
       - ./data:/data
     env_file:
       - .env

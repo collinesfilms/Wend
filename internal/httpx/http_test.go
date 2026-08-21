@@ -320,3 +320,24 @@ func mustJSON(t *testing.T, v any) string {
 	}
 	return string(b)
 }
+
+func TestLinkStillResolvesWhenTheProxyRewritesHost(t *testing.T) {
+	h := setup(t)
+	h.createLink(t, `{"dest":"https://collines.co/tp","slug":"proxy"}`)
+
+	// Some reverse proxies forward Host as their own upstream address. Without
+	// a fallback every link would 404, and nothing in the symptom would point
+	// at the proxy configuration.
+	r := httptest.NewRequest(http.MethodGet, "http://localhost:9018/proxy", nil)
+	r.Host = "localhost:9018"
+	r.Header.Set("X-Forwarded-For", "203.0.113.4")
+	w := httptest.NewRecorder()
+	h.handler.ServeHTTP(w, r)
+
+	if w.Code != http.StatusFound {
+		t.Fatalf("status = %d, want 302 behind a Host-rewriting proxy", w.Code)
+	}
+	if got := w.Header().Get("Location"); got != "https://collines.co/tp" {
+		t.Fatalf("Location = %q", got)
+	}
+}

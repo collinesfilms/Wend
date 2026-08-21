@@ -127,7 +127,10 @@ Certificat**, avec Let's Encrypt.
 
 ### 5. Démarrer
 
+Le conteneur ne tourne pas en root : le dossier de données doit lui appartenir.
+
 ```sh
+mkdir -p data && sudo chown -R 10001:10001 data
 docker compose up -d
 docker compose logs -f
 ```
@@ -262,5 +265,8 @@ domaine court sur lequel chercher le slug.
 **L'interface s'affiche mais reste vide.** Le binaire a été construit sans
 `web/dist`. La page le dit explicitement — les redirections, elles, fonctionnent
 déjà.
+
+**« impossible d'ouvrir la base ».** Le dossier `data/` n'appartient pas à
+l'utilisateur du conteneur : `sudo chown -R 10001:10001 data`.
 
 **Repartir de zéro.** Arrêtez le conteneur et supprimez `data/`. Tout est là.
