@@ -4,13 +4,15 @@ import (
 	"html/template"
 	"net/http"
 	"strings"
+
+	"github.com/collinesfilms/wend/locales"
 )
 
 // The pages a visitor can land on. They are server-rendered, self-contained and
 // make no external requests: students hit these, so nothing about them leaves
 // the server they came from.
 var visitorTmpl = template.Must(template.New("page").Parse(`<!doctype html>
-<html lang="en">
+<html lang="{{.Lang}}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -99,9 +101,9 @@ button:hover{transform:translateY(-1px);filter:brightness(1.06)}
   {{if .ShowForm}}
   <form method="POST" action="{{.Action}}">
     <div class="field">
-      <input type="password" name="password" placeholder="Password" autocomplete="off" autofocus required>
+      <input type="password" name="password" placeholder="{{.Placeholder}}" autocomplete="off" autofocus required>
     </div>
-    <button type="submit">Open the link</button>
+    <button type="submit">{{.Submit}}</button>
   </form>
   {{end}}
   {{if .Note}}<div class="fine{{if .NoteBad}} bad{{end}}">{{.Note}}</div>{{end}}
@@ -111,19 +113,25 @@ button:hover{transform:translateY(-1px);filter:brightness(1.06)}
 </html>`))
 
 type pageData struct {
-	Title    string
-	Heading  string
-	Body     string
-	Note     string
-	NoteBad  bool
-	Foot     string
-	Action   string
-	ShowForm bool
-	Dead     bool
-	Icon     string // "locked", "expired" or "missing"
+	Lang        string
+	Title       string
+	Heading     string
+	Body        string
+	Note        string
+	NoteBad     bool
+	Foot        string
+	Action      string
+	Placeholder string
+	Submit      string
+	ShowForm    bool
+	Dead        bool
+	Icon        string // "locked", "expired" or "missing"
 }
 
 func renderPage(w http.ResponseWriter, status int, d pageData) {
+	if d.Lang == "" {
+		d.Lang = locales.Default
+	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Robots-Tag", "noindex, nofollow")
@@ -131,32 +139,38 @@ func renderPage(w http.ResponseWriter, status int, d pageData) {
 	_ = visitorTmpl.Execute(w, d)
 }
 
-func gatePage(w http.ResponseWriter, shortURL string, wrong bool) {
+func (s *Server) gatePage(w http.ResponseWriter, shortURL string, wrong bool) {
+	lang := s.cfg.Lang
 	d := pageData{
-		Title:    "Protected link",
-		Heading:  "This link is protected",
-		Body:     "Enter the password you were given to continue.",
-		Foot:     strings.TrimPrefix(shortURL, "https://"),
-		Action:   "",
-		ShowForm: true,
-		Icon:     "locked",
+		Lang:        lang,
+		Title:       locales.Visitor(lang, "gate.title"),
+		Heading:     locales.Visitor(lang, "gate.heading"),
+		Body:        locales.Visitor(lang, "gate.body"),
+		Foot:        strings.TrimPrefix(shortURL, "https://"),
+		Action:      "",
+		Placeholder: locales.Visitor(lang, "gate.placeholder"),
+		Submit:      locales.Visitor(lang, "gate.submit"),
+		ShowForm:    true,
+		Icon:        "locked",
 	}
 	status := http.StatusUnauthorized
 	if wrong {
-		d.Note = "That password does not work."
+		d.Note = locales.Visitor(lang, "gate.wrong")
 		d.NoteBad = true
 	}
 	renderPage(w, status, d)
 }
 
-func expiredPage(w http.ResponseWriter, shortURL, when string) {
-	body := "Ask whoever sent it to you for an up-to-date link."
+func (s *Server) expiredPage(w http.ResponseWriter, shortURL, when string) {
+	lang := s.cfg.Lang
+	body := locales.Visitor(lang, "expired.body")
 	if when != "" {
-		body = "It stopped working on " + when + ". " + body
+		body = locales.Visitor(lang, "expired.body_dated", "date", when)
 	}
 	renderPage(w, http.StatusGone, pageData{
-		Title:   "Expired link",
-		Heading: "This link has expired",
+		Lang:    lang,
+		Title:   locales.Visitor(lang, "expired.title"),
+		Heading: locales.Visitor(lang, "expired.heading"),
 		Body:    body,
 		Foot:    strings.TrimPrefix(shortURL, "https://"),
 		Dead:    true,
@@ -164,22 +178,26 @@ func expiredPage(w http.ResponseWriter, shortURL, when string) {
 	})
 }
 
-func notFoundPage(w http.ResponseWriter, shortURL string) {
+func (s *Server) notFoundPage(w http.ResponseWriter, shortURL string) {
+	lang := s.cfg.Lang
 	renderPage(w, http.StatusNotFound, pageData{
-		Title:   "Link not found",
-		Heading: "This link does not exist",
-		Body:    "Check the address: a letter or a digit may have been copied wrong.",
+		Lang:    lang,
+		Title:   locales.Visitor(lang, "missing.title"),
+		Heading: locales.Visitor(lang, "missing.heading"),
+		Body:    locales.Visitor(lang, "missing.body"),
 		Foot:    strings.TrimPrefix(shortURL, "https://"),
 		Dead:    true,
 		Icon:    "missing",
 	})
 }
 
-func tooManyPage(w http.ResponseWriter, shortURL string) {
+func (s *Server) tooManyPage(w http.ResponseWriter, shortURL string) {
+	lang := s.cfg.Lang
 	renderPage(w, http.StatusTooManyRequests, pageData{
-		Title:   "Too many tries",
-		Heading: "Too many tries",
-		Body:    "Wait a minute before trying again.",
+		Lang:    lang,
+		Title:   locales.Visitor(lang, "throttled.title"),
+		Heading: locales.Visitor(lang, "throttled.heading"),
+		Body:    locales.Visitor(lang, "throttled.body"),
 		Foot:    strings.TrimPrefix(shortURL, "https://"),
 		Dead:    true,
 		Icon:    "locked",

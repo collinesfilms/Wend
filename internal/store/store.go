@@ -123,4 +123,34 @@ func (s *Store) User(ctx context.Context, id string) (User, error) {
 	return u, err
 }
 
+// ---------------------------------------------------------------- user preferences
+
+// UserPrefs returns everything this person has chosen for themselves. A user
+// who has chosen nothing yet gets an empty map, not an error.
+func (s *Store) UserPrefs(ctx context.Context, userID string) (map[string]string, error) {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT key, value FROM user_prefs WHERE user_id = ?`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]string{}
+	for rows.Next() {
+		var k, v string
+		if err := rows.Scan(&k, &v); err != nil {
+			return nil, err
+		}
+		out[k] = v
+	}
+	return out, rows.Err()
+}
+
+func (s *Store) SetUserPref(ctx context.Context, userID, key, value string) error {
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO user_prefs (user_id, key, value) VALUES (?, ?, ?)
+		 ON CONFLICT(user_id, key) DO UPDATE SET value = excluded.value`,
+		userID, key, value)
+	return err
+}
+
 func nowString() string { return time.Now().UTC().Format(time.RFC3339) }

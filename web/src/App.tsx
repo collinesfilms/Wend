@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { api, ApiError, type Brand, type Domain, type Link, type Settings, type User } from './api'
 import { DetailSheet, LinksSheet, SettingsSheet } from './Sheets'
 import { Stage } from './Stage'
-import { applyTheme, storedTheme, type Theme } from './theme'
+import { applyTheme, cachedTheme, isTheme, nextTheme, watchSystem, type Theme } from './theme'
+import { t } from './i18n'
 import * as I from './icons'
 import { draw as drawQr } from './qr'
 
@@ -15,7 +16,7 @@ export default function App() {
   const [settings, setSettings] = useState<Settings | null>(null)
   const [brand, setBrand] = useState<Brand>({ name: 'Wend', tagline: '' })
   const [links, setLinks] = useState<Link[]>([])
-  const [theme, setTheme] = useState<Theme>(storedTheme)
+  const [theme, setThemeState] = useState<Theme>(cachedTheme)
   const [sheet, setSheet] = useState<Sheet>('none')
   const [detailId, setDetailId] = useState<number | null>(null)
   const [detailFrom, setDetailFrom] = useState<'list' | 'direct'>('list')
@@ -34,6 +35,23 @@ export default function App() {
   }, [])
 
   useEffect(() => applyTheme(theme), [theme])
+
+  // On auto, the system can change under us — at sunset, or when someone flips
+  // the switch in another window. The colours follow from the stylesheet; this
+  // is only here to keep the address bar's tint honest.
+  useEffect(() => watchSystem(theme, () => applyTheme(theme)), [theme])
+
+  // The choice is the account's, so it is written back to the server. The local
+  // state moves first: a preference that waits on a round trip feels broken.
+  const setTheme = useCallback(
+    (next: Theme) => {
+      setThemeState(next)
+      void api.savePrefs({ theme: next }).catch(() => {
+        /* the choice still holds in this browser; the next load will re-sync */
+      })
+    },
+    [],
+  )
 
   // Whoever runs this instance puts their own name on the tab.
   useEffect(() => {
@@ -54,7 +72,7 @@ export default function App() {
       setLinks(await api.links())
     } catch (err) {
       if (!(err instanceof ApiError && err.status === 401)) {
-        showToast('Could not load your links', true)
+        showToast(t('toast.links_failed'), true)
       }
     }
   }, [showToast])
@@ -67,6 +85,8 @@ export default function App() {
         setDomains(me.domains)
         setSettings(me.settings)
         if (me.brand) setBrand(me.brand)
+        // The account's theme is the truth; the cached one only painted frame one.
+        if (isTheme(me.prefs?.theme)) setThemeState(me.prefs.theme)
         await loadLinks()
       } catch {
         setUser(null)
@@ -136,7 +156,7 @@ export default function App() {
   }
 
   if (loading) {
-    return <div className="spinner-page">Loading…</div>
+    return <div className="spinner-page">{t('loading')}</div>
   }
 
   if (!user || !settings) {
@@ -153,10 +173,10 @@ export default function App() {
           <button
             className={`chip-btn${links.length === 0 ? ' hidden' : ''}`}
             onClick={() => openSheet('links')}
-            aria-label="Open the link list"
+            aria-label={t('chrome.links.open')}
           >
             <I.Rows size={14} width={1.8} />
-            Links <span className="count tnum">{links.length}</span>
+            {t('chrome.links')} <span className="count tnum">{links.length}</span>
           </button>
         </div>
 
@@ -164,22 +184,23 @@ export default function App() {
           {/* the sign-out pill opens leftwards over these two, so they step aside */}
           <button
             className={`icon-btn theme${signOutOpen ? ' hidden' : ''}`}
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            aria-label={theme === 'dark' ? 'Switch to light' : 'Switch to dark'}
+            onClick={() => setTheme(nextTheme(theme))}
+            aria-label={t(`chrome.theme.${theme}`)}
+            title={t(`chrome.theme.${theme}`)}
           >
-            {theme === 'dark' ? <I.Sun size={16} /> : <I.Moon size={16} />}
+            <ThemeIcon theme={theme} />
           </button>
           <button
             className={`icon-btn${signOutOpen ? ' hidden' : ''}`}
             onClick={() => openSheet('settings')}
-            aria-label="Settings"
+            aria-label={t('chrome.settings')}
           >
             <I.Gear size={16} />
           </button>
           <div className="avatar-wrap">
             <button
               className={`avatar${signOutOpen ? ' hidden' : ''}`}
-              aria-label="Account"
+              aria-label={t('chrome.account')}
               onClick={(e) => {
                 e.stopPropagation()
                 setSignOutOpen(true)
@@ -194,7 +215,7 @@ export default function App() {
                 void signOut()
               }}
             >
-              <span>Sign out</span>
+              <span>{t('chrome.signout')}</span>
             </button>
           </div>
         </div>
@@ -233,7 +254,7 @@ export default function App() {
         onChanged={(updated) => {
           void loadLinks()
           if (updated === null) {
-            showToast('Link deleted')
+            showToast(t('toast.link_deleted'))
             backFromDetail()
           }
         }}
@@ -244,9 +265,11 @@ export default function App() {
         user={user}
         domains={domains}
         settings={settings}
+        theme={theme}
         onClose={closeSheets}
         onDomains={setDomains}
         onSettings={setSettings}
+        onTheme={setTheme}
         onSignOut={() => void signOut()}
         onToast={showToast}
       />
@@ -259,7 +282,7 @@ export default function App() {
           {qrFull ? `${qrFull.host}/` : ''}
           <b>{qrFull?.slug}</b>
         </div>
-        <div className="qr-full-hint">Tap anywhere to close</div>
+        <div className="qr-full-hint">{t('qr.full.hint')}</div>
       </div>
 
       <div className={`toast${toast ? ' on' : ''}${toast?.bad ? ' bad' : ''}`} role="status">
@@ -267,6 +290,13 @@ export default function App() {
       </div>
     </>
   )
+}
+
+/** Auto shows the two halves together: whichever the system picks, it is this. */
+function ThemeIcon({ theme }: { theme: Theme }) {
+  if (theme === 'light') return <I.Sun size={16} />
+  if (theme === 'dark') return <I.Moon size={16} />
+  return <I.Auto size={16} />
 }
 
 function SignIn({ error, brand }: { error: string | null; brand: Brand }) {
@@ -277,17 +307,14 @@ function SignIn({ error, brand }: { error: string | null; brand: Brand }) {
           <span className="mark">
             <I.Key size={24} />
           </span>
-          <h1>{brand.name || 'Sign in'}</h1>
-          <p>{brand.tagline || 'Sign in with the account that has been granted access.'}</p>
+          <h1>{brand.name || t('signin.title')}</h1>
+          <p>{brand.tagline || t('signin.body')}</p>
           <button className="big-act" onClick={() => { window.location.href = '/auth/login' }}>
             <I.Key size={18} />
-            Continue with PocketID
+            {t('signin.button')}
           </button>
           {error && <div className="fine" style={{ color: 'var(--danger)' }}>{error}</div>}
-          <div className="fine">
-            There is nothing to sign up for. Access is granted in your identity provider,
-            and revoked there too.
-          </div>
+          <div className="fine">{t('signin.fine')}</div>
         </div>
       </div>
     </div>

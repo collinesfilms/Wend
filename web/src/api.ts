@@ -1,5 +1,6 @@
 // API client. Every /api route needs a session; a 401 simply drops the app
 // back to the sign-in screen.
+import { t } from './i18n'
 
 export type Domain = { id: number; host: string; is_default: boolean }
 
@@ -37,7 +38,17 @@ export type Settings = {
 
 export type Brand = { name: string; tagline: string }
 
-export type Me = { user: User; domains: Domain[]; settings: Settings; brand: Brand }
+/** Kept against the account, not the browser, so it travels between devices. */
+export type Prefs = { theme: 'auto' | 'light' | 'dark' }
+
+export type Me = {
+  user: User
+  domains: Domain[]
+  settings: Settings
+  prefs: Prefs
+  lang: string
+  brand: Brand
+}
 
 export class ApiError extends Error {
   status: number
@@ -67,7 +78,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const message =
       data && typeof data === 'object' && 'error' in data
         ? String((data as { error: unknown }).error)
-        : `Erreur ${res.status}`
+        : t('http.error', { status: res.status })
     throw new ApiError(res.status, message)
   }
   return data as T
@@ -113,6 +124,9 @@ export const api = {
 
   saveSettings: (body: Settings) =>
     request<Settings>('/api/settings', { method: 'PUT', body: JSON.stringify(body) }),
+
+  savePrefs: (body: Prefs) =>
+    request<Prefs>('/api/prefs', { method: 'PUT', body: JSON.stringify(body) }),
 
   addDomain: (host: string) =>
     request<Domain>('/api/domains', { method: 'POST', body: JSON.stringify({ host }) }),

@@ -90,6 +90,9 @@ CG_SESSION_KEY=
 CG_BRAND_NAME=Wend
 CG_TAGLINE=Short links, on your own domain.
 
+# Language for the whole deployment: en or fr.
+CG_LANG=en
+
 CG_TRUST_PROXY=true
 TZ=UTC
 ```
@@ -103,6 +106,7 @@ TZ=UTC
 | `CG_SESSION_KEY` | — | 32+ random characters. Changing it signs everyone out; links are untouched. |
 | `CG_BRAND_NAME` | `Wend` | The name on the tab and the sign-in page. |
 | `CG_TAGLINE` | a neutral line | The line under it. |
+| `CG_LANG` | `en` | Language for the interface, the API's messages and the visitor pages. `en` or `fr`. |
 | `CG_TRUST_PROXY` | `true` | Read the client address from `X-Forwarded-For`. |
 | `CG_LISTEN` | `:8080` | Bind address. |
 | `CG_DB_PATH` | `/data/wend.db` | SQLite file. |
@@ -167,6 +171,7 @@ internal/store      SQLite: schema, links, slugs, clicks
 internal/auth       OIDC sign-in (PKCE) and sessions
 internal/httpx      API, redirect path, server-rendered visitor pages
 web/                React interface, embedded into the binary
+locales/            every word the product says, in every language
 ```
 
 The SQLite driver is pure Go, so building for a NAS's arm64 needs no C
@@ -190,6 +195,11 @@ interface.
 key that rotates daily and is never kept, so it cannot be recomputed or
 followed across days. No IP is stored, no cookie is set on the redirect path.
 
+**One language per deployment, set in the environment.** `CG_LANG` decides what
+the interface, the API and the visitor pages all say. It is not a setting in the
+app: an instance serves one audience, and a language switch buried in a
+preferences pane only ever finds the person who did not need it.
+
 **Fonts are self-hosted.** The error pages are what strangers load; they should
 not have to contact a font CDN to be told a link expired.
 
@@ -211,9 +221,23 @@ For interface work, `npm --prefix web run dev` serves the front end with hot
 reload and proxies `/api` and `/auth` to the `go run` on :8080.
 
 ```sh
-go test ./...                  # store and HTTP behaviour
+go test ./...                  # store, HTTP behaviour and the catalogue
 npm --prefix web run typecheck
 ```
+
+### Translations
+
+Every string the product says lives in `locales/strings.json` — the Go server
+and the React app both read that one file. Entries pair the English source with
+each translation, so a reviewer reads them side by side:
+
+```json
+"detail.short_link": { "en": "Short link", "fr": "Lien court" }
+```
+
+To add a language, add its code to `languages` and a value to every entry.
+`go test ./locales/` fails on a string that has been left untranslated in any
+language, and on a `{placeholder}` dropped or misspelled along the way.
 
 ---
 

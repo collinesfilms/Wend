@@ -77,6 +77,14 @@
    BASE
    ============================================================ */
 *{box-sizing:border-box;}
+html{
+  /* An application, not a document: no double-tap zoom, no rubber-band under
+     the sheets, no phantom text scaling when the phone is turned sideways. */
+  touch-action:manipulation;
+  overscroll-behavior:none;
+  -webkit-text-size-adjust:100%;
+  text-size-adjust:100%;
+}
 body{
   margin:0;
   background:var(--ground);
@@ -88,8 +96,24 @@ body{
   text-rendering:optimizeLegibility;
   min-height:100dvh;
   overflow:hidden;
+  overscroll-behavior:none;
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+  /* Chrome is furniture and should not select like prose. What is worth
+     selecting — a URL, a slug, a suggested password — opts back in below. */
+  -webkit-user-select:none;
+  user-select:none;
 }
-button{font-family:inherit;font-size:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;}
+/* The things a person may genuinely want to select and copy by hand. */
+input,textarea,.mono,.r-dest,.qr-full-url,.foot,.alias-chip,.link-plate .short{
+  -webkit-user-select:text;
+  user-select:text;
+}
+button{
+  font-family:inherit;font-size:inherit;color:inherit;
+  background:none;border:0;padding:0;cursor:pointer;
+  touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+}
 input{font-family:inherit;font-size:inherit;color:inherit;background:none;border:0;}
 input:focus{outline:none;}
 :focus-visible{outline:2px solid var(--slate);outline-offset:2px;border-radius:4px;}
@@ -574,6 +598,9 @@ input:focus{outline:none;}
   transition:transform var(--t-slow) var(--ease);
 }
 .sheet.auto{height:auto;max-height:min(84dvh,760px);}
+/* Sheets sit on bottom:0, which on a phone is behind the browser's own bar.
+   The grip and the body take the inset so nothing important hides under it. */
+.sheet{padding-bottom:env(safe-area-inset-bottom);}
 .sheet.on{transform:translate(-50%,0);}
 .grip{width:34px;height:4px;border-radius:999px;background:var(--line-2);margin:9px auto 3px;flex:none;}
 .sheet-head{display:flex;align-items:center;gap:10px;padding:8px 16px 12px;flex:none;}
@@ -606,7 +633,12 @@ input:focus{outline:none;}
 }
 .filters button.sel{background:var(--raised);color:var(--ink);box-shadow:var(--shadow-s);}
 
-.rows{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:0 10px 18px;}
+.rows{
+  flex:1;min-height:0;
+  overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+  padding:0 10px 18px;
+  padding-bottom:calc(18px + env(safe-area-inset-bottom));
+}
 .row{
   position:relative;
   display:grid;grid-template-columns:1fr auto;
@@ -677,7 +709,17 @@ input:focus{outline:none;}
 .detail-head .t{min-width:0;}
 .detail-head .t .s{display:block;font-family:var(--mono);font-size:14px;font-weight:500;}
 .detail-head .t .d{display:block;font-size:11.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.detail-body{flex:0 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:14px 16px 22px;display:flex;flex-direction:column;gap:14px;}
+.detail-body{
+  flex:0 1 auto;min-height:0;
+  overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+  padding:14px 16px 22px;
+  padding-bottom:calc(22px + env(safe-area-inset-bottom));
+  display:flex;flex-direction:column;gap:14px;
+}
+/* A column flex container shrinks its children before it agrees to scroll. On a
+   phone that turned the sections into slivers with their rows clipped away by
+   their own overflow:hidden. Nothing in here shrinks: the body scrolls. */
+.detail-body > *{flex:none;}
 .stats-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
 .stat-tile{background:var(--raised);border:1px solid var(--line);border-radius:var(--r-m);padding:11px 12px;overflow:hidden;}
 .stat-tile .k{font-size:10.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);}
@@ -695,6 +737,10 @@ input:focus{outline:none;}
 .sec-row .k{font-size:12.5px;color:var(--ink-2);}
 .sec-row .v{min-width:0;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .sec-row.wide .v{white-space:normal;font-size:12px;color:var(--ink-3);line-height:1.4;}
+/* An explanatory line beside a field is prose, not a value: it wraps rather
+   than being cut short. Translations run longer than the English they replace,
+   and this is where that first shows. */
+.row-edit .v{white-space:normal;line-height:1.4;}
 .sec-row .v.mono{font-family:var(--mono);font-size:12px;}
 .mini{
   height:28px;min-width:82px;padding:0 11px;border-radius:7px;
@@ -780,6 +826,7 @@ input:focus{outline:none;}
 
 @media (max-width:520px){
   #app{padding:16px;padding-bottom:88px;}
+  .chrome{padding-top:env(safe-area-inset-top);height:calc(64px + env(safe-area-inset-top));}
   .stage{border-radius:var(--r-l);}
   .sheet:not(.auto){height:86dvh;}
   .filters button{padding:0 9px;}
@@ -791,6 +838,20 @@ input:focus{outline:none;}
   .sec-row.wide{grid-template-columns:minmax(0,1fr) auto;}
   .sec-row.wide .v{grid-column:1;grid-row:1;}
   .sec-row.wide .mini{grid-row:1;}
+
+  /* Safari zooms the whole page when a field under 16px takes focus, and there
+     is no zooming back out of an interface that has no scrollbars. The fields
+     are grown instead: the layout has room for it, and it is the size a thumb
+     wants anyway. */
+  .search input,
+  .field input,
+  .row-edit input,
+  .add-domain input,
+  .custom-date input,
+  .gate-field input{font-size:16px;}
+  .search{height:40px;}
+  .row-edit input,.add-domain input{height:38px;}
+
 }
 
 /* ============================================================

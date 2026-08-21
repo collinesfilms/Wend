@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { api, ApiError, type Domain, type Link, type Settings, type User } from './api'
 import { copyText, suggestPassword } from './clipboard'
-import { age, destLabel, EXPIRY_PRESETS, expiryToDate, relative, shortDate, type ExpiryKey } from './format'
+import { age, destLabel, expiryPresets, expiryToDate, relative, shortDate, type ExpiryKey } from './format'
+import { t } from './i18n'
 import * as I from './icons'
+import { THEMES, type Theme } from './theme'
 
 /** Seven days as an area: enough to read the shape, no more. */
 function Spark({ series }: { series: number[] }) {
@@ -62,18 +64,18 @@ export function LinksSheet({ open, links, onOpenDetail, onClose, onQrFull, onToa
 
   const copyRow = async (link: Link) => {
     const ok = await copyText(link.short_url)
-    if (!ok) return onToast('Your browser blocked the clipboard', true)
+    if (!ok) return onToast(t('toast.clipboard_blocked'), true)
     setCopiedId(link.id)
     window.setTimeout(() => setCopiedId(null), 900)
   }
 
   return (
-    <div className={`sheet${open ? ' on' : ''}`} role="dialog" aria-label="Links">
+    <div className={`sheet${open ? ' on' : ''}`} role="dialog" aria-label={t('list.title')}>
       <div className="grip" />
       <div className="sheet-head">
-        <h2>Links</h2>
+        <h2>{t('list.title')}</h2>
         <span className="n tnum">{links.length}</span>
-        <button className="sheet-close" onClick={onClose} aria-label="Close">
+        <button className="sheet-close" onClick={onClose} aria-label={t('list.close')}>
           <I.X size={16} width={1.9} />
         </button>
       </div>
@@ -83,14 +85,14 @@ export function LinksSheet({ open, links, onOpenDetail, onClose, onQrFull, onToa
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search links"
+            placeholder={t('list.search')}
             autoComplete="off"
           />
         </label>
         <div className="filters">
-          {([['all', 'All'], ['live', 'Live'], ['expired', 'Expired']] as const).map(([key, label]) => (
+          {(['all', 'live', 'expired'] as const).map((key) => (
             <button key={key} className={filter === key ? 'sel' : ''} onClick={() => setFilter(key)}>
-              {label}
+              {t(`list.filter.${key}`)}
             </button>
           ))}
         </div>
@@ -98,7 +100,7 @@ export function LinksSheet({ open, links, onOpenDetail, onClose, onQrFull, onToa
       <div className="rows">
         {visible.length === 0 && (
           <div className="empty-note">
-            {links.length === 0 ? 'No links yet.' : 'No links match that.'}
+            {links.length === 0 ? t('list.empty') : t('list.no_match')}
           </div>
         )}
         {visible.map((l) => {
@@ -118,7 +120,7 @@ export function LinksSheet({ open, links, onOpenDetail, onClose, onQrFull, onToa
               </span>
               <span className="r-dest">{destLabel(l.dest)}</span>
               <span className="r-meta">
-                <span className="r-when">{l.disabled ? 'disabled' : relative(l.expires_at)}</span>
+                <span className="r-when">{l.disabled ? t('detail.disabled') : relative(l.expires_at)}</span>
                 <span className="r-opens">
                   <I.Out size={12} />
                   {l.clicks}
@@ -126,13 +128,13 @@ export function LinksSheet({ open, links, onOpenDetail, onClose, onQrFull, onToa
               </span>
               <span className="row-acts" onClick={(e) => e.stopPropagation()}>
                 <button
-                  aria-label="Copy"
+                  aria-label={t('list.copy')}
                   style={copiedId === l.id ? { color: 'var(--ok)' } : undefined}
                   onClick={() => void copyRow(l)}
                 >
                   {copiedId === l.id ? <I.Check size={14} width={2.2} /> : <I.Copy size={14} width={1.8} />}
                 </button>
-                <button aria-label="QR code" onClick={() => onQrFull(l)}>
+                <button aria-label={t('list.qr')} onClick={() => onQrFull(l)}>
                   <I.Qr size={14} width={1.7} />
                 </button>
               </span>
@@ -185,7 +187,7 @@ function InlineEdit({
       return
     }
     setOk(false)
-    setNote({ tone: '', text: 'Checking' })
+    setNote({ tone: '', text: t('slugcheck.checking') })
     const timer = window.setTimeout(async () => {
       const result = await check(value)
       setNote({ tone: result.tone, text: result.text })
@@ -215,7 +217,7 @@ function InlineEdit({
           }}
         />
         <button className="mini" style={{ minWidth: 0 }} onClick={onCancel}>
-          Cancel
+          {t('inline.cancel')}
         </button>
         <button
           className="mini accent"
@@ -223,7 +225,7 @@ function InlineEdit({
           disabled={disabled || !draft.trim()}
           onClick={() => onSave(draft.trim())}
         >
-          Save
+          {t('inline.save')}
         </button>
       </span>
       {note?.text && <span className={`note ${note.tone}`}>{note.text}</span>}
@@ -259,7 +261,7 @@ export function DetailSheet({ open, link, from, onBack, onChanged, onToast }: De
     try {
       onChanged(await run())
     } catch (err) {
-      onToast(err instanceof ApiError ? err.message : 'That did not work', true)
+      onToast(err instanceof ApiError ? err.message : t('toast.generic_failure'), true)
     } finally {
       setPending(null)
     }
@@ -268,10 +270,14 @@ export function DetailSheet({ open, link, from, onBack, onChanged, onToast }: De
   const dead = link.expired || link.disabled
 
   return (
-    <div className={`sheet auto${open ? ' on' : ''}`} role="dialog" aria-label="Link detail">
+    <div className={`sheet auto${open ? ' on' : ''}`} role="dialog" aria-label={t('detail.title')}>
       <div className="grip" />
       <div className="detail-head">
-        <button className="back" onClick={onBack} aria-label={from === 'list' ? 'Back to links' : 'Close'}>
+        <button
+          className="back"
+          onClick={onBack}
+          aria-label={from === 'list' ? t('detail.back_to_links') : t('detail.close')}
+        >
           {from === 'list' ? <I.Back size={17} width={1.9} /> : <I.X size={17} width={1.9} />}
         </button>
         <span className="t">
@@ -282,44 +288,52 @@ export function DetailSheet({ open, link, from, onBack, onChanged, onToast }: De
       <div className={`detail-body${pending ? ' busy' : ''}`}>
         <div className="stats-strip">
           <div className="stat-tile">
-            <div className="k">Opens</div>
+            <div className="k">{t('detail.stat.opens')}</div>
             <div className="v">{link.clicks}</div>
-            {link.clicks ? <Spark series={link.series} /> : <span className="sub">nothing yet</span>}
+            {link.clicks ? (
+              <Spark series={link.series} />
+            ) : (
+              <span className="sub">{t('detail.stat.nothing_yet')}</span>
+            )}
           </div>
           <div className="stat-tile">
-            <div className="k">People</div>
+            <div className="k">{t('detail.stat.people')}</div>
             <div className="v">{link.uniques}</div>
             <span className="sub">
-              {link.clicks ? `${Math.round((link.uniques / link.clicks) * 100)}% of opens` : 'nothing yet'}
+              {link.clicks
+                ? t('detail.stat.share_of_opens', {
+                    percent: Math.round((link.uniques / link.clicks) * 100),
+                  })
+                : t('detail.stat.nothing_yet')}
             </span>
           </div>
           <div className="stat-tile">
-            <div className="k">Created</div>
+            <div className="k">{t('detail.stat.created')}</div>
             <div className="v sm">{shortDate(link.created_at)}</div>
             <span className="sub">{age(link.created_at)}</span>
           </div>
         </div>
 
-        <div className="sec-title">Link</div>
+        <div className="sec-title">{t('detail.section.link')}</div>
         <div className="sec">
           <div className="sec-row">
-            <span className="k">Short link</span>
+            <span className="k">{t('detail.short_link')}</span>
             <span className="v mono">{link.short_url.replace(/^https:\/\//, '')}</span>
             <button
               className="mini"
               onClick={async () => {
                 const ok = await copyText(link.short_url)
-                onToast(ok ? 'Link copied' : 'Your browser blocked the clipboard', !ok)
+                onToast(ok ? t('toast.link_copied') : t('toast.clipboard_blocked'), !ok)
               }}
             >
-              Copy
+              {t('detail.copy')}
             </button>
           </div>
           {editing === 'dest' ? (
             <InlineEdit
-              label="Points to"
+              label={t('detail.points_to')}
               value={link.dest}
-              placeholder="https://…"
+              placeholder={t('detail.dest.placeholder')}
               onCancel={() => setEditing(null)}
               onSave={(next) => {
                 setEditing(null)
@@ -328,9 +342,9 @@ export function DetailSheet({ open, link, from, onBack, onChanged, onToast }: De
             />
           ) : (
             <div className="sec-row">
-              <span className="k">Points to</span>
+              <span className="k">{t('detail.points_to')}</span>
               <span className="v">{destLabel(link.dest)}</span>
-              <button className="mini" onClick={() => setEditing('dest')}>Change</button>
+              <button className="mini" onClick={() => setEditing('dest')}>{t('detail.change')}</button>
             </div>
           )}
 
@@ -338,7 +352,7 @@ export function DetailSheet({ open, link, from, onBack, onChanged, onToast }: De
               thing that can be removed, and adding one is the same field the
               create flow uses. */}
           <div className="sec-row" style={{ display: 'grid', gap: 8 }}>
-            <span className="k" style={{ gridColumn: '1 / -1' }}>Extra slugs</span>
+            <span className="k" style={{ gridColumn: '1 / -1' }}>{t('detail.aliases')}</span>
             <span className="row-edit" style={{ gridColumn: '1 / -1' }}>
               {link.aliases.length ? (
                 <span className="alias-chips" style={{ flex: 1 }}>
@@ -350,30 +364,33 @@ export function DetailSheet({ open, link, from, onBack, onChanged, onToast }: De
                 </span>
               ) : (
                 <span className="v" style={{ flex: 1, color: 'var(--ink-3)' }}>
-                  None. Another slug can open the same link.
+                  {t('detail.aliases.none')}
                 </span>
               )}
               <button className="mini accent" style={{ minWidth: 0 }} onClick={() => setEditing('alias')}>
-                Add
+                {t('detail.aliases.add')}
               </button>
             </span>
           </div>
           {editing === 'alias' && (
             <InlineEdit
-              label="New slug for this link"
+              label={t('detail.aliases.label')}
               value=""
-              placeholder="another-slug"
+              placeholder={t('detail.aliases.placeholder')}
               mono
-              hint="Another slug that opens the same link, sharing its stats."
+              hint={t('detail.aliases.hint')}
               check={async (value) => {
                 try {
                   const res = await api.checkSlug(value, link.domain_id)
-                  if (res.available) return { tone: 'ok', text: `/${value} is free.`, ok: true }
-                  if (res.reason === 'reserved') return { tone: 'bad', text: 'That slug is reserved.', ok: false }
-                  if (res.reason === 'invalid') return { tone: 'bad', text: 'Lowercase letters, numbers and dashes only.', ok: false }
-                  return { tone: 'bad', text: 'That one is already in use.', ok: false }
+                  if (res.available)
+                    return { tone: 'ok', text: t('slugcheck.free', { url: `/${value}` }), ok: true }
+                  if (res.reason === 'reserved')
+                    return { tone: 'bad', text: t('slugcheck.reserved'), ok: false }
+                  if (res.reason === 'invalid')
+                    return { tone: 'bad', text: t('slugcheck.invalid'), ok: false }
+                  return { tone: 'bad', text: t('slugcheck.taken'), ok: false }
                 } catch {
-                  return { tone: '', text: 'Could not check that slug.', ok: false }
+                  return { tone: '', text: t('slugcheck.failed'), ok: false }
                 }
               }}
               onCancel={() => setEditing(null)}
@@ -388,11 +405,11 @@ export function DetailSheet({ open, link, from, onBack, onChanged, onToast }: De
           )}
         </div>
 
-        <div className="sec-title">Access</div>
+        <div className="sec-title">{t('detail.section.access')}</div>
         <div className="sec">
           <div className="sec-row">
-            <span className="k">Password</span>
-            <span className="v">{link.has_password ? 'On' : 'Off'}</span>
+            <span className="k">{t('detail.password')}</span>
+            <span className="v">{link.has_password ? t('detail.password.on') : t('detail.password.off')}</span>
             <button
               className="mini"
               onClick={() => {
@@ -403,13 +420,13 @@ export function DetailSheet({ open, link, from, onBack, onChanged, onToast }: De
                 setEditing('pass')
               }}
             >
-              {link.has_password ? 'Remove' : 'Set'}
+              {link.has_password ? t('detail.password.remove') : t('detail.password.set')}
             </button>
           </div>
           <div className="sec-row">
-            <span className="k">Expires</span>
+            <span className="k">{t('detail.expires')}</span>
             <span className="v" style={dead ? { color: 'var(--danger)' } : undefined}>
-              {link.disabled ? 'disabled' : relative(link.expires_at)}
+              {link.disabled ? t('detail.disabled') : relative(link.expires_at)}
             </span>
             <ExpiryButton link={link} dead={dead} onAct={act} />
           </div>
@@ -418,9 +435,9 @@ export function DetailSheet({ open, link, from, onBack, onChanged, onToast }: De
         {editing === 'pass' && (
           <div className="sec">
             <InlineEdit
-              label="Password for this link"
+              label={t('detail.password.label')}
               value={suggestPassword()}
-              placeholder="Choose a password"
+              placeholder={t('panel.password.placeholder')}
               mono
               onCancel={() => setEditing(null)}
               onSave={(next) => {
@@ -431,13 +448,11 @@ export function DetailSheet({ open, link, from, onBack, onChanged, onToast }: De
           </div>
         )}
 
-        <div className="sec-title">Deletion</div>
+        <div className="sec-title">{t('detail.section.deletion')}</div>
         <div className="sec">
           <div className="sec-row wide">
             <span className="v">
-              {confirmDelete
-                ? 'Confirm: the link stops working immediately.'
-                : 'The link stops working and its slug is never handed out again.'}
+              {confirmDelete ? t('detail.delete.confirm_explain') : t('detail.delete.explain')}
             </span>
             <button
               className={`mini warn${confirmDelete ? ' armed' : ''}`}
@@ -449,7 +464,7 @@ export function DetailSheet({ open, link, from, onBack, onChanged, onToast }: De
                 })
               }}
             >
-              {confirmDelete ? 'Confirm' : 'Delete'}
+              {confirmDelete ? t('detail.delete.confirm') : t('detail.delete')}
             </button>
           </div>
         </div>
@@ -471,7 +486,7 @@ function ExpiryButton({
   if (!open) {
     return (
       <button className={`mini${dead ? ' accent' : ''}`} onClick={() => setOpen(true)}>
-        {dead ? 'Revive' : 'Change'}
+        {dead ? t('detail.revive') : t('detail.change')}
       </button>
     )
   }
@@ -486,13 +501,13 @@ function ExpiryButton({
   }
   return (
     <span className="acts" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-      {EXPIRY_PRESETS.map((p) => (
+      {expiryPresets().map((p) => (
         <button key={p.key} className="mini" style={{ minWidth: 0 }} onClick={() => set(p.key)}>
-          {p.label.replace('In ', '+').replace('End of today', 'tonight')}
+          {p.compact}
         </button>
       ))}
       <button className="mini" style={{ minWidth: 0 }} onClick={() => set('never')}>
-        never
+        {t('expiry.never.compact')}
       </button>
     </span>
   )
@@ -505,9 +520,11 @@ type SettingsSheetProps = {
   user: User
   domains: Domain[]
   settings: Settings
+  theme: Theme
   onClose: () => void
   onDomains: (domains: Domain[]) => void
   onSettings: (settings: Settings) => void
+  onTheme: (theme: Theme) => void
   onSignOut: () => void
   onToast: (message: string, bad?: boolean) => void
 }
@@ -517,9 +534,11 @@ export function SettingsSheet({
   user,
   domains,
   settings,
+  theme,
   onClose,
   onDomains,
   onSettings,
+  onTheme,
   onSignOut,
   onToast,
 }: SettingsSheetProps) {
@@ -536,7 +555,7 @@ export function SettingsSheet({
     try {
       await run()
     } catch (err) {
-      onToast(err instanceof ApiError ? err.message : 'That did not work', true)
+      onToast(err instanceof ApiError ? err.message : t('toast.generic_failure'), true)
     } finally {
       setBusy(false)
     }
@@ -548,29 +567,29 @@ export function SettingsSheet({
     })
 
   return (
-    <div className={`sheet auto${open ? ' on' : ''}`} role="dialog" aria-label="Settings">
+    <div className={`sheet auto${open ? ' on' : ''}`} role="dialog" aria-label={t('settings.title')}>
       <div className="grip" />
       <div className="detail-head">
-        <button className="back" onClick={onClose} aria-label="Close">
+        <button className="back" onClick={onClose} aria-label={t('settings.close')}>
           <I.X size={17} width={1.9} />
         </button>
         <span className="t">
-          <span className="s">Settings</span>
+          <span className="s">{t('settings.title')}</span>
           <span className="d">{user.email || user.name}</span>
         </span>
       </div>
       <div className={`detail-body${busy ? ' busy' : ''}`}>
-        <div className="sec-title">Domains</div>
+        <div className="sec-title">{t('settings.section.domains')}</div>
         <div className="sec set-domains">
           {domains.map((d) => (
             <div className="domain-row" key={d.id}>
               <span className="host">{d.host}</span>
               <span className="tagline">
-                {d.is_default ? 'used for new links' : 'available'}
+                {d.is_default ? t('settings.domain.used_for_new') : t('settings.domain.available')}
               </span>
               <span className="acts">
                 {d.is_default ? (
-                  <span className="badge">default</span>
+                  <span className="badge">{t('settings.domain.default_badge')}</span>
                 ) : (
                   <>
                     <button
@@ -580,12 +599,12 @@ export function SettingsSheet({
                         await refreshDomains()
                       })}
                     >
-                      Make default
+                      {t('settings.domain.make_default')}
                     </button>
                     <button
                       className="mini warn"
                       style={{ minWidth: 0 }}
-                      aria-label={`Remove ${d.host}`}
+                      aria-label={t('settings.domain.remove', { host: d.host })}
                       onClick={() => guard(async () => {
                         await api.deleteDomain(d.id)
                         await refreshDomains()
@@ -613,27 +632,27 @@ export function SettingsSheet({
                 await api.addDomain(host.trim())
                 setHost('')
                 await refreshDomains()
-                onToast('Domain added. Point it at this server too.')
+                onToast(t('toast.domain_added'))
               })}
             >
-              Add
+              {t('settings.domain.add')}
             </button>
           </div>
         </div>
         <p className="empty-note" style={{ padding: '0 2px', textAlign: 'left', fontSize: 11.5 }}>
-          A domain added here also has to point at this server and have a certificate.
-          Links already made keep the domain they were created on.
+          {t('settings.domain.note')}
         </p>
 
-        <div className="sec-title">New links</div>
+        <div className="sec-title">{t('settings.section.new_links')}</div>
         <div className="sec">
           <div className="sec-row">
-            <span className="k">Code length</span>
-            <span className="v mono">{settings.slug_length} characters</span>
+            <span className="k">{t('settings.slug_length')}</span>
+            <span className="v mono">{t('settings.slug_length.value', { n: settings.slug_length })}</span>
             <span className="acts" style={{ display: 'flex', gap: 6 }}>
               <button
                 className="mini"
                 style={{ minWidth: 0 }}
+                aria-label={t('settings.slug_length.shorter')}
                 disabled={settings.slug_length <= 4}
                 onClick={() => save({ ...settings, slug_length: settings.slug_length - 1 })}
               >
@@ -642,6 +661,7 @@ export function SettingsSheet({
               <button
                 className="mini"
                 style={{ minWidth: 0 }}
+                aria-label={t('settings.slug_length.longer')}
                 disabled={settings.slug_length >= 12}
                 onClick={() => save({ ...settings, slug_length: settings.slug_length + 1 })}
               >
@@ -650,55 +670,75 @@ export function SettingsSheet({
             </span>
           </div>
           <div className="sec-row wide" style={{ display: 'block' }}>
-            <div className="k" style={{ marginBottom: 8 }}>Default expiry</div>
+            <div className="k" style={{ marginBottom: 8 }}>{t('settings.default_expiry')}</div>
             <div className="seg">
-              {([['never', 'Never'], ['today', 'Tonight'], ['7d', '7 days'], ['30d', '30 days']] as const).map(
-                ([key, label]) => (
-                  <button
-                    key={key}
-                    className={settings.default_expiry === key ? 'sel' : ''}
-                    onClick={() => save({ ...settings, default_expiry: key })}
-                  >
-                    {label}
-                  </button>
-                ),
-              )}
+              {(['never', 'today', '7d', '30d'] as const).map((key) => (
+                <button
+                  key={key}
+                  className={settings.default_expiry === key ? 'sel' : ''}
+                  onClick={() => save({ ...settings, default_expiry: key })}
+                >
+                  {t(key === 'today' ? 'settings.default_expiry.tonight' : `settings.default_expiry.${key}`)}
+                </button>
+              ))}
             </div>
           </div>
           <div className="sec-row">
-            <span className="k">Copy after creating</span>
+            <span className="k">{t('settings.auto_copy')}</span>
             <span className="v" style={{ color: 'var(--ink-3)', fontSize: 11.5 }}>
-              The link goes straight to your clipboard.
+              {t('settings.auto_copy.note')}
             </span>
             <button
               className={`switch${settings.auto_copy ? ' on' : ''}`}
               role="switch"
               aria-checked={settings.auto_copy}
-              aria-label="Copy after creating"
+              aria-label={t('settings.auto_copy')}
               onClick={() => save({ ...settings, auto_copy: !settings.auto_copy })}
             />
           </div>
           <div className="sec-row">
-            <span className="k">Paste on open</span>
+            <span className="k">{t('settings.auto_paste')}</span>
             <span className="v" style={{ color: 'var(--ink-3)', fontSize: 11.5 }}>
-              Where the browser allows it.
+              {t('settings.auto_paste.note')}
             </span>
             <button
               className={`switch${settings.auto_paste ? ' on' : ''}`}
               role="switch"
               aria-checked={settings.auto_paste}
-              aria-label="Paste on open"
+              aria-label={t('settings.auto_paste')}
               onClick={() => save({ ...settings, auto_paste: !settings.auto_paste })}
             />
           </div>
         </div>
 
-        <div className="sec-title">Account</div>
+        {/* The theme is the one setting kept against the person rather than the
+            instance, so it travels with the account instead of the browser. */}
+        <div className="sec-title">{t('settings.section.appearance')}</div>
+        <div className="sec">
+          <div className="sec-row wide" style={{ display: 'block' }}>
+            <div className="k" style={{ marginBottom: 2 }}>{t('settings.theme')}</div>
+            <div className="v" style={{ marginBottom: 8 }}>{t('settings.theme.note')}</div>
+            <div className="seg">
+              {THEMES.map((key) => (
+                <button
+                  key={key}
+                  className={theme === key ? 'sel' : ''}
+                  aria-pressed={theme === key}
+                  onClick={() => onTheme(key)}
+                >
+                  {t(`settings.theme.${key}`)}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="sec-title">{t('settings.section.account')}</div>
         <div className="sec">
           <div className="sec-row">
-            <span className="k">Signed in</span>
+            <span className="k">{t('settings.signed_in')}</span>
             <span className="v">{user.name || user.email}</span>
-            <button className="mini warn" onClick={onSignOut}>Sign out</button>
+            <button className="mini warn" onClick={onSignOut}>{t('settings.signout')}</button>
           </div>
         </div>
       </div>

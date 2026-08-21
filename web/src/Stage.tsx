@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { api, ApiError, type Domain, type Link, type Settings } from './api'
 import { copyText, isUrl, readClipboard, suggestPassword } from './clipboard'
-import { EXPIRY_PRESETS, expiryToDate, type ExpiryKey } from './format'
+import { dayMonth, expiryPresets, expiryToDate, type ExpiryKey } from './format'
+import { t } from './i18n'
 import * as I from './icons'
 import { draw as drawQr } from './qr'
 
@@ -137,7 +138,7 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
   const onPasteClick = async () => {
     const text = await readClipboard(600)
     if (isUrl(text)) capture(text)
-    else onToast('Nothing to paste — copy a link first.', true)
+    else onToast(t('toast.nothing_to_paste'), true)
   }
 
   // Reusing lands on exactly the same result screen a fresh link would.
@@ -150,7 +151,7 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
     if (!alive.current) return
     setCopied({
       ok,
-      text: ok ? 'Copied to your clipboard' : 'Press Copy to put it on your clipboard',
+      text: ok ? t('result.copied') : t('result.copy_prompt'),
     })
   }
 
@@ -229,12 +230,10 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
       if (!alive.current) return
       setCopied({
         ok,
-        text: ok
-          ? 'Copied to your clipboard'
-          : 'Press Copy to put it on your clipboard',
+        text: ok ? t('result.copied') : t('result.copy_prompt'),
       })
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : 'Could not create the link'
+      const message = err instanceof ApiError ? err.message : t('toast.create_failed')
       onToast(message, true)
     } finally {
       if (alive.current) setBusy(false)
@@ -254,7 +253,7 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
       if (!alive.current) return
       setCopied({
         ok,
-        text: ok ? 'Copied to your clipboard' : 'Your browser blocked the clipboard',
+        text: ok ? t('result.copied') : t('toast.clipboard_blocked'),
       })
     }, 140)
   }
@@ -271,7 +270,7 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
 
   const [slugDraft, setSlugDraft] = useState('')
   const [slugState, setSlugState] = useState<{ tone: '' | 'ok' | 'bad'; text: string; busy: boolean }>(
-    { tone: '', text: 'Lowercase letters, numbers and dashes.', busy: false },
+    { tone: '', text: t('slugcheck.hint_charset'), busy: false },
   )
   const [passDraft, setPassDraft] = useState('')
   const [passVisible, setPassVisible] = useState(true)
@@ -283,24 +282,26 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
   useEffect(() => {
     const value = slugDraft.trim().toLowerCase()
     if (!value) {
-      setSlugState({ tone: '', text: 'Leave empty for a random code.', busy: false })
+      setSlugState({ tone: '', text: t('slugcheck.hint_empty'), busy: false })
       return
     }
     if (!/^[a-z0-9][a-z0-9._-]{0,63}$/.test(value)) {
-      setSlugState({ tone: 'bad', text: 'Lowercase letters, numbers and dashes only.', busy: false })
+      setSlugState({ tone: 'bad', text: t('slugcheck.invalid'), busy: false })
       return
     }
-    setSlugState({ tone: '', text: 'Checking', busy: true })
+    setSlugState({ tone: '', text: t('slugcheck.checking'), busy: true })
     const timer = window.setTimeout(async () => {
       if (!domain) return
       try {
         const res = await api.checkSlug(value, domain.id)
         if (!alive.current) return
-        if (res.available) setSlugState({ tone: 'ok', text: `${host}/${value} is free.`, busy: false })
-        else if (res.reason === 'reserved') setSlugState({ tone: 'bad', text: 'That slug is reserved.', busy: false })
-        else setSlugState({ tone: 'bad', text: 'That one is already in use.', busy: false })
+        if (res.available)
+          setSlugState({ tone: 'ok', text: t('slugcheck.free', { url: `${host}/${value}` }), busy: false })
+        else if (res.reason === 'reserved')
+          setSlugState({ tone: 'bad', text: t('slugcheck.reserved'), busy: false })
+        else setSlugState({ tone: 'bad', text: t('slugcheck.taken'), busy: false })
       } catch {
-        if (alive.current) setSlugState({ tone: '', text: 'Could not check that slug.', busy: false })
+        if (alive.current) setSlugState({ tone: '', text: t('slugcheck.failed'), busy: false })
       }
     }, 380)
     return () => window.clearTimeout(timer)
@@ -309,11 +310,11 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
   const cellValue = (key: (typeof CELL_ORDER)[number]) => {
     switch (key) {
       case 'slug':
-        return slug ? `/${slug}` : 'auto'
+        return slug ? `/${slug}` : t('cell.slug.auto')
       case 'pass':
-        return password ? '•'.repeat(Math.min(9, password.length)) : 'off'
+        return password ? '•'.repeat(Math.min(9, password.length)) : t('cell.password.off')
       case 'exp':
-        return expiry ? expiry.label : 'never'
+        return expiry ? expiry.label : t('cell.expires.never')
     }
   }
 
@@ -337,13 +338,13 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
           <span className="glyph">
             <I.Paste size={20} />
           </span>
-          <span className="lbl">{step === 'captured' && url ? hostOf(url) : 'Paste a link'}</span>
+          <span className="lbl">{step === 'captured' && url ? hostOf(url) : t('stage.paste')}</span>
           <span className="hint">
             {step === 'captured' ? (
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>ready to shorten</span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>{t('stage.ready')}</span>
             ) : (
               <>
-                or press <kbd>{isMac() ? '⌘V' : 'Ctrl V'}</kbd>
+                {t('stage.paste.hint_prefix')} <kbd>{isMac() ? '⌘V' : 'Ctrl V'}</kbd>
               </>
             )}
           </span>
@@ -352,17 +353,15 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
         <div className={`urlhead${showHead ? ' on' : ''}`}>
           <span className="fav" />
           <span className="txt">{url ? <UrlLabel url={url} /> : null}</span>
-          <button className="x" onClick={reset} aria-label="Clear the link">
+          <button className="x" onClick={reset} aria-label={t('stage.clear')}>
             <I.X size={14} width={2} />
           </button>
         </div>
 
         <div className={`dupe-note${showHead && dupe ? ' on' : ''}`} style={{ top: 48 }}>
-          <span className="txt">
-            Already shortened as /{dupe?.slug}
-          </span>
+          <span className="txt">{t('stage.dupe', { slug: dupe?.slug ?? '' })}</span>
           <button className="use" onClick={() => dupe && useExisting(dupe)}>
-            Use it
+            {t('stage.dupe.use')}
           </button>
         </div>
 
@@ -399,9 +398,9 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
               </span>
               <span className="bot">
                 <span className="name">
-                  {key === 'slug' && 'Slug'}
-                  {key === 'pass' && 'Password'}
-                  {key === 'exp' && 'Expires'}
+                  {key === 'slug' && t('cell.slug')}
+                  {key === 'pass' && t('cell.password')}
+                  {key === 'exp' && t('cell.expires')}
                 </span>
                 <span className="val">{cellValue(key)}</span>
               </span>
@@ -417,7 +416,7 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
         >
           <div className="panel-head">
             <span className="ico" style={{ color: 'var(--moss)' }}><I.Pencil size={17} width={1.8} /></span>
-            <h3>Custom slug</h3>
+            <h3>{t('panel.slug.title')}</h3>
           </div>
           <div className="panel-body">
             <div className="field">
@@ -434,7 +433,7 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
               />
               <button
                 className="act"
-                aria-label="Generate a new code"
+                aria-label={t('panel.slug.regenerate')}
                 onClick={() => setSlugDraft(randomCode(settings.slug_length))}
               >
                 <I.Cycle size={15} width={1.8} />
@@ -446,7 +445,7 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
             </div>
           </div>
           <div className="panel-acts">
-            <button className="pa-ghost" onClick={closePanel}>Cancel</button>
+            <button className="pa-ghost" onClick={closePanel}>{t('panel.cancel')}</button>
             <button
               className="pa-main"
               style={{ background: 'var(--moss)' }}
@@ -456,7 +455,7 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
                 closePanel()
               }}
             >
-              {slugDraft.trim() ? 'Use this slug' : 'Use a random code'}
+              {slugDraft.trim() ? t('panel.slug.use') : t('panel.slug.use_random')}
             </button>
           </div>
         </div>
@@ -469,7 +468,7 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
         >
           <div className="panel-head">
             <span className="ico" style={{ color: 'var(--slate)' }}><I.Lock size={17} width={1.8} /></span>
-            <h3>Password</h3>
+            <h3>{t('panel.password.title')}</h3>
           </div>
           <div className="panel-body">
             <div className="field">
@@ -480,33 +479,33 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
                 spellCheck={false}
                 autoCapitalize="off"
                 autoComplete="off"
-                placeholder="Choose a password"
+                placeholder={t('panel.password.placeholder')}
               />
               <button
                 className="act"
-                aria-label={passVisible ? 'Hide the password' : 'Show the password'}
+                aria-label={passVisible ? t('panel.password.hide') : t('panel.password.show')}
                 onClick={() => setPassVisible((v) => !v)}
               >
                 {passVisible ? <I.EyeOff size={15} width={1.8} /> : <I.Eye size={15} width={1.8} />}
               </button>
               <button
                 className="act"
-                aria-label="Suggest another password"
+                aria-label={t('panel.password.suggest')}
                 onClick={() => { setPassDraft(suggestPassword()); setPassVisible(true) }}
               >
                 <I.Cycle size={15} width={1.8} />
               </button>
             </div>
-            <div className="field-note">Visitors type this before the link opens.</div>
+            <div className="field-note">{t('panel.password.note')}</div>
           </div>
           <div className="panel-acts">
-            <button className="pa-ghost" onClick={closePanel}>Cancel</button>
+            <button className="pa-ghost" onClick={closePanel}>{t('panel.cancel')}</button>
             {password && (
               <button
                 className="pa-clear"
                 onClick={() => { setPassword(null); setPassDraft(''); closePanel() }}
               >
-                Remove
+                {t('panel.password.remove')}
               </button>
             )}
             <button
@@ -515,7 +514,7 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
               disabled={!passDraft.trim()}
               onClick={() => { setPassword(passDraft.trim() || null); closePanel() }}
             >
-              Protect the link
+              {t('panel.password.protect')}
             </button>
           </div>
         </div>
@@ -528,11 +527,11 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
         >
           <div className="panel-head">
             <span className="ico" style={{ color: 'var(--ochre)' }}><I.Clock size={17} width={1.8} /></span>
-            <h3>Expires</h3>
+            <h3>{t('panel.expiry.title')}</h3>
           </div>
           <div className="panel-body">
             <div className="chips">
-              {EXPIRY_PRESETS.map((p) => (
+              {expiryPresets().map((p) => (
                 <button
                   key={p.key}
                   className={expDraft === p.key ? 'sel' : ''}
@@ -542,7 +541,7 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
                 </button>
               ))}
               <button className={expDraft === 'custom' ? 'sel' : ''} onClick={() => setExpDraft('custom')}>
-                Pick a date
+                {t('panel.expiry.pick_date')}
               </button>
             </div>
             <div className={`custom-date${expDraft === 'custom' ? ' on' : ''}`}>
@@ -552,15 +551,13 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
                 onChange={(e) => setExpCustom(e.target.value)}
               />
             </div>
-            <div className="field-note">
-              After this the link shows an expired page. You can revive it later.
-            </div>
+            <div className="field-note">{t('panel.expiry.note')}</div>
           </div>
           <div className="panel-acts">
-            <button className="pa-ghost" onClick={closePanel}>Cancel</button>
+            <button className="pa-ghost" onClick={closePanel}>{t('panel.cancel')}</button>
             {expiry && (
               <button className="pa-clear" onClick={() => { setExpiry(null); setExpDraft(null); closePanel() }}>
-                Never
+                {t('panel.expiry.never')}
               </button>
             )}
             <button
@@ -571,15 +568,15 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
                 if (expDraft === 'custom') {
                   const at = new Date(expCustom)
                   if (Number.isNaN(at.getTime())) return
-                  setExpiry({ key: 'custom', label: `on ${at.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`, at })
+                  setExpiry({ key: 'custom', label: t('panel.expiry.on_date', { date: dayMonth(at) }), at })
                 } else if (expDraft) {
-                  const preset = EXPIRY_PRESETS.find((p) => p.key === expDraft)!
+                  const preset = expiryPresets().find((p) => p.key === expDraft)!
                   setExpiry({ key: expDraft, label: preset.short, at: expiryToDate(expDraft) })
                 }
                 closePanel()
               }}
             >
-              Set expiry
+              {t('panel.expiry.set')}
             </button>
           </div>
         </div>
@@ -606,31 +603,31 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
           <div className="result-acts">
             <button className="ra-copy" onClick={() => void copyAgain()}>
               <I.Copy size={16} width={1.8} />
-              Copy link
+              {t('result.copy')}
             </button>
-            <button className="ra-side" aria-label="QR code" onClick={showQr}>
+            <button className="ra-side" aria-label={t('result.qr')} onClick={showQr}>
               <I.Qr size={17} width={1.7} />
             </button>
             <button
               className="ra-side"
-              aria-label="Edit this link"
+              aria-label={t('result.edit')}
               onClick={() => created && onOpenDetail(created.id)}
             >
               <I.Tune size={17} width={1.8} />
             </button>
           </div>
           <div className="result-meta">
-            {slug && <span className="tag slug-t"><I.Pencil size={11} width={2} />custom slug</span>}
-            {password && <span className="tag pass-t"><I.Lock size={11} width={2} />password</span>}
+            {slug && <span className="tag slug-t"><I.Pencil size={11} width={2} />{t('result.tag.slug')}</span>}
+            {password && <span className="tag pass-t"><I.Lock size={11} width={2} />{t('result.tag.password')}</span>}
             {expiry && <span className="tag exp-t"><I.Clock size={11} width={2} />{expiry.label}</span>}
             {!slug && !password && !expiry && (
-              <span className="tag">no expiry, no password</span>
+              <span className="tag">{t('result.tag.plain')}</span>
             )}
           </div>
           <div className="result-new">
             <button onClick={reset}>
               <I.Plus size={13} width={2} />
-              Shorten another link
+              {t('result.again')}
             </button>
           </div>
         </div>
@@ -645,9 +642,9 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
             <b>{created?.slug}</b>
           </div>
           <div className="qr-acts">
-            <button className="ra-ghost" onClick={() => setStep('result')}>Back</button>
+            <button className="ra-ghost" onClick={() => setStep('result')}>{t('qr.back')}</button>
             <button className="ra-main" onClick={() => created && onShowQrFull(created)}>
-              Full screen
+              {t('qr.fullscreen')}
             </button>
           </div>
         </div>
@@ -660,8 +657,8 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
         onClick={() => void shorten()}
       >
         <I.Bolt size={18} />
-        {busy ? 'Creating…' : 'Shorten'}
-        <span className="sub">{slug ? `/${slug}` : 'random code'}</span>
+        {busy ? t('shorten.busy') : t('shorten')}
+        <span className="sub">{slug ? `/${slug}` : t('shorten.random')}</span>
       </button>
     </div>
   )
@@ -694,7 +691,7 @@ function hostOf(url: string) {
   try {
     return new URL(url).host.replace(/^www\./, '')
   } catch {
-    return 'Link ready'
+    return t('stage.link_ready')
   }
 }
 

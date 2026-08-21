@@ -7,6 +7,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/collinesfilms/wend/locales"
 )
 
 type Config struct {
@@ -26,6 +28,11 @@ type Config struct {
 	// Whoever runs this can put their own name on it; the defaults are ours.
 	BrandName string
 	Tagline   string
+
+	// Lang is the one language the whole deployment speaks: the interface, the
+	// API's refusals and the visitor pages alike. It is deliberately not a
+	// per-user setting.
+	Lang string
 }
 
 func env(key, def string) string {
@@ -61,6 +68,10 @@ func Load() (*Config, error) {
 		Dev:              envBool("CG_DEV", false),
 		BrandName:        env("CG_BRAND_NAME", "Wend"),
 		Tagline:          env("CG_TAGLINE", "Short links, on your own domain."),
+		Lang:             locales.Normalise(env("CG_LANG", locales.Default)),
+	}
+	if !locales.Supported(c.Lang) {
+		c.Lang = locales.Default
 	}
 
 	for _, d := range strings.Split(env("CG_SHORT_DOMAINS", ""), ",") {
@@ -131,6 +142,6 @@ func contains(list []string, want string) bool {
 }
 
 func (c *Config) String() string {
-	return fmt.Sprintf("listen=%s db=%s base=%s domains=%s issuer=%s",
-		c.Listen, c.DBPath, c.BaseURL, strings.Join(c.Domains, ","), c.OIDCIssuer)
+	return fmt.Sprintf("listen=%s db=%s base=%s domains=%s issuer=%s lang=%s",
+		c.Listen, c.DBPath, c.BaseURL, strings.Join(c.Domains, ","), c.OIDCIssuer, c.Lang)
 }

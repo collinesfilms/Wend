@@ -1,0 +1,944 @@
+{
+  "_readme": [
+    "Wend's single translation catalogue. Both the browser app and the",
+    "server-rendered visitor pages read this file, so every word the product",
+    "says lives here and nowhere else.",
+    "",
+    "Each entry is an object of language codes: 'en' is the source, the others",
+    "are translations. To review a translation, read down the pairs — the",
+    "English is always right next to it.",
+    "",
+    "Placeholders are written {like_this} and must survive translation intact,",
+    "spelling included. They are substituted at runtime.",
+    "",
+    "The active language is chosen once, at deploy time, with CG_LANG in the",
+    "environment (en | fr). There is no per-user language switch.",
+    "",
+    "Sections:",
+    "  app     - the signed-in interface (React)",
+    "  errors  - what the API says back when something is refused; keyed by",
+    "            the English message so the Go call sites stay readable",
+    "  visitor - the pages a person who clicks a short link can land on",
+    "  months  - month names for the one date the server formats itself"
+  ],
+  "languages": [
+    "en",
+    "fr"
+  ],
+  "app": {
+    "loading": {
+      "en": "Loading…",
+      "fr": "Chargement…"
+    },
+    "chrome.links": {
+      "en": "Links",
+      "fr": "Liens"
+    },
+    "chrome.links.open": {
+      "en": "Open the link list",
+      "fr": "Ouvrir la liste des liens"
+    },
+    "chrome.settings": {
+      "en": "Settings",
+      "fr": "Réglages"
+    },
+    "chrome.account": {
+      "en": "Account",
+      "fr": "Compte"
+    },
+    "chrome.signout": {
+      "en": "Sign out",
+      "fr": "Se déconnecter"
+    },
+    "chrome.theme.auto": {
+      "en": "Theme: follow the system. Switch to light.",
+      "fr": "Thème : automatique. Passer en clair."
+    },
+    "chrome.theme.light": {
+      "en": "Theme: light. Switch to dark.",
+      "fr": "Thème : clair. Passer en sombre."
+    },
+    "chrome.theme.dark": {
+      "en": "Theme: dark. Follow the system.",
+      "fr": "Thème : sombre. Revenir au thème automatique."
+    },
+    "signin.title": {
+      "en": "Sign in",
+      "fr": "Connexion"
+    },
+    "signin.body": {
+      "en": "Sign in with the account that has been granted access.",
+      "fr": "Connectez-vous avec un compte autorisé."
+    },
+    "signin.button": {
+      "en": "Continue with PocketID",
+      "fr": "Continuer avec PocketID"
+    },
+    "signin.fine": {
+      "en": "There is nothing to sign up for. Access is granted in your identity provider, and revoked there too.",
+      "fr": "Il n’y a rien à créer ici. L’accès s’accorde depuis votre fournisseur d’identité, et se révoque au même endroit."
+    },
+    "toast.links_failed": {
+      "en": "Could not load your links",
+      "fr": "Impossible de charger vos liens"
+    },
+    "toast.link_deleted": {
+      "en": "Link deleted",
+      "fr": "Lien supprimé"
+    },
+    "toast.link_copied": {
+      "en": "Link copied",
+      "fr": "Lien copié"
+    },
+    "toast.clipboard_blocked": {
+      "en": "Your browser blocked the clipboard",
+      "fr": "Votre navigateur a bloqué l’accès au presse-papiers"
+    },
+    "toast.nothing_to_paste": {
+      "en": "Nothing to paste — copy a link first.",
+      "fr": "Rien à coller — copiez d’abord un lien."
+    },
+    "toast.generic_failure": {
+      "en": "That did not work",
+      "fr": "Cela n’a pas fonctionné"
+    },
+    "toast.create_failed": {
+      "en": "Could not create the link",
+      "fr": "Impossible de créer le lien"
+    },
+    "toast.domain_added": {
+      "en": "Domain added. Point it at this server too.",
+      "fr": "Domaine ajouté. Pensez à le faire pointer vers ce serveur."
+    },
+    "qr.full.hint": {
+      "en": "Tap anywhere to close",
+      "fr": "Appuyez n’importe où pour fermer"
+    },
+    "stage.paste": {
+      "en": "Paste a link",
+      "fr": "Coller un lien"
+    },
+    "stage.paste.hint_prefix": {
+      "en": "or press",
+      "fr": "ou appuyez sur"
+    },
+    "stage.ready": {
+      "en": "ready to shorten",
+      "fr": "prêt à raccourcir"
+    },
+    "stage.link_ready": {
+      "en": "Link ready",
+      "fr": "Lien prêt"
+    },
+    "stage.clear": {
+      "en": "Clear the link",
+      "fr": "Effacer le lien"
+    },
+    "stage.dupe": {
+      "en": "Already shortened as /{slug}",
+      "fr": "Déjà raccourci en /{slug}"
+    },
+    "stage.dupe.use": {
+      "en": "Use it",
+      "fr": "L’utiliser"
+    },
+    "cell.slug": {
+      "en": "Slug",
+      "fr": "Slug"
+    },
+    "cell.slug.auto": {
+      "en": "auto",
+      "fr": "auto"
+    },
+    "cell.password": {
+      "en": "Password",
+      "fr": "Mot de passe"
+    },
+    "cell.password.off": {
+      "en": "off",
+      "fr": "aucun"
+    },
+    "cell.expires": {
+      "en": "Expires",
+      "fr": "Expiration"
+    },
+    "cell.expires.never": {
+      "en": "never",
+      "fr": "jamais"
+    },
+    "panel.cancel": {
+      "en": "Cancel",
+      "fr": "Annuler"
+    },
+    "panel.slug.title": {
+      "en": "Custom slug",
+      "fr": "Slug personnalisé"
+    },
+    "panel.slug.regenerate": {
+      "en": "Generate a new code",
+      "fr": "Générer un nouveau code"
+    },
+    "panel.slug.use": {
+      "en": "Use this slug",
+      "fr": "Utiliser ce slug"
+    },
+    "panel.slug.use_random": {
+      "en": "Use a random code",
+      "fr": "Utiliser un code aléatoire"
+    },
+    "panel.password.title": {
+      "en": "Password",
+      "fr": "Mot de passe"
+    },
+    "panel.password.placeholder": {
+      "en": "Choose a password",
+      "fr": "Choisissez un mot de passe"
+    },
+    "panel.password.hide": {
+      "en": "Hide the password",
+      "fr": "Masquer le mot de passe"
+    },
+    "panel.password.show": {
+      "en": "Show the password",
+      "fr": "Afficher le mot de passe"
+    },
+    "panel.password.suggest": {
+      "en": "Suggest another password",
+      "fr": "Proposer un autre mot de passe"
+    },
+    "panel.password.note": {
+      "en": "Visitors type this before the link opens.",
+      "fr": "Les visiteurs devront le saisir pour ouvrir le lien."
+    },
+    "panel.password.remove": {
+      "en": "Remove",
+      "fr": "Retirer"
+    },
+    "panel.password.protect": {
+      "en": "Protect the link",
+      "fr": "Protéger le lien"
+    },
+    "panel.expiry.title": {
+      "en": "Expires",
+      "fr": "Expiration"
+    },
+    "panel.expiry.pick_date": {
+      "en": "Pick a date",
+      "fr": "Choisir une date"
+    },
+    "panel.expiry.note": {
+      "en": "After this the link shows an expired page. You can revive it later.",
+      "fr": "Passé cette date, le lien affiche une page d’expiration. Vous pourrez le réactiver plus tard."
+    },
+    "panel.expiry.never": {
+      "en": "Never",
+      "fr": "Jamais"
+    },
+    "panel.expiry.set": {
+      "en": "Set expiry",
+      "fr": "Définir l’expiration"
+    },
+    "panel.expiry.on_date": {
+      "en": "on {date}",
+      "fr": "le {date}"
+    },
+    "slugcheck.hint_empty": {
+      "en": "Leave empty for a random code.",
+      "fr": "Laissez vide pour un code aléatoire."
+    },
+    "slugcheck.hint_charset": {
+      "en": "Lowercase letters, numbers and dashes.",
+      "fr": "Lettres minuscules, chiffres et tirets."
+    },
+    "slugcheck.invalid": {
+      "en": "Lowercase letters, numbers and dashes only.",
+      "fr": "Lettres minuscules, chiffres et tirets uniquement."
+    },
+    "slugcheck.checking": {
+      "en": "Checking",
+      "fr": "Vérification"
+    },
+    "slugcheck.free": {
+      "en": "{url} is free.",
+      "fr": "{url} est libre."
+    },
+    "slugcheck.reserved": {
+      "en": "That slug is reserved.",
+      "fr": "Ce slug est réservé."
+    },
+    "slugcheck.taken": {
+      "en": "That one is already in use.",
+      "fr": "Celui-ci est déjà pris."
+    },
+    "slugcheck.failed": {
+      "en": "Could not check that slug.",
+      "fr": "Impossible de vérifier ce slug."
+    },
+    "shorten": {
+      "en": "Shorten",
+      "fr": "Raccourcir"
+    },
+    "shorten.busy": {
+      "en": "Creating…",
+      "fr": "Création…"
+    },
+    "shorten.random": {
+      "en": "random code",
+      "fr": "code aléatoire"
+    },
+    "result.copied": {
+      "en": "Copied to your clipboard",
+      "fr": "Copié dans votre presse-papiers"
+    },
+    "result.copy_prompt": {
+      "en": "Press Copy to put it on your clipboard",
+      "fr": "Appuyez sur Copier pour l’envoyer dans le presse-papiers"
+    },
+    "result.copy": {
+      "en": "Copy link",
+      "fr": "Copier le lien"
+    },
+    "result.qr": {
+      "en": "QR code",
+      "fr": "QR code"
+    },
+    "result.edit": {
+      "en": "Edit this link",
+      "fr": "Modifier ce lien"
+    },
+    "result.tag.slug": {
+      "en": "custom slug",
+      "fr": "slug personnalisé"
+    },
+    "result.tag.password": {
+      "en": "password",
+      "fr": "mot de passe"
+    },
+    "result.tag.plain": {
+      "en": "no expiry, no password",
+      "fr": "sans expiration, sans mot de passe"
+    },
+    "result.again": {
+      "en": "Shorten another link",
+      "fr": "Raccourcir un autre lien"
+    },
+    "qr.back": {
+      "en": "Back",
+      "fr": "Retour"
+    },
+    "qr.fullscreen": {
+      "en": "Full screen",
+      "fr": "Plein écran"
+    },
+    "list.title": {
+      "en": "Links",
+      "fr": "Liens"
+    },
+    "list.close": {
+      "en": "Close",
+      "fr": "Fermer"
+    },
+    "list.search": {
+      "en": "Search links",
+      "fr": "Rechercher un lien"
+    },
+    "list.filter.all": {
+      "en": "All",
+      "fr": "Tous"
+    },
+    "list.filter.live": {
+      "en": "Live",
+      "fr": "Actifs"
+    },
+    "list.filter.expired": {
+      "en": "Expired",
+      "fr": "Expirés"
+    },
+    "list.empty": {
+      "en": "No links yet.",
+      "fr": "Aucun lien pour l’instant."
+    },
+    "list.no_match": {
+      "en": "No links match that.",
+      "fr": "Aucun lien ne correspond."
+    },
+    "list.copy": {
+      "en": "Copy",
+      "fr": "Copier"
+    },
+    "list.qr": {
+      "en": "QR code",
+      "fr": "QR code"
+    },
+    "inline.cancel": {
+      "en": "Cancel",
+      "fr": "Annuler"
+    },
+    "inline.save": {
+      "en": "Save",
+      "fr": "Enregistrer"
+    },
+    "detail.title": {
+      "en": "Link detail",
+      "fr": "Détail du lien"
+    },
+    "detail.back_to_links": {
+      "en": "Back to links",
+      "fr": "Retour aux liens"
+    },
+    "detail.close": {
+      "en": "Close",
+      "fr": "Fermer"
+    },
+    "detail.stat.opens": {
+      "en": "Opens",
+      "fr": "Ouvertures"
+    },
+    "detail.stat.people": {
+      "en": "People",
+      "fr": "Personnes"
+    },
+    "detail.stat.created": {
+      "en": "Created",
+      "fr": "Créé"
+    },
+    "detail.stat.nothing_yet": {
+      "en": "nothing yet",
+      "fr": "rien pour l’instant"
+    },
+    "detail.stat.share_of_opens": {
+      "en": "{percent}% of opens",
+      "fr": "{percent} % des ouvertures"
+    },
+    "detail.section.link": {
+      "en": "Link",
+      "fr": "Lien"
+    },
+    "detail.short_link": {
+      "en": "Short link",
+      "fr": "Lien court"
+    },
+    "detail.copy": {
+      "en": "Copy",
+      "fr": "Copier"
+    },
+    "detail.points_to": {
+      "en": "Points to",
+      "fr": "Pointe vers"
+    },
+    "detail.change": {
+      "en": "Change",
+      "fr": "Modifier"
+    },
+    "detail.dest.placeholder": {
+      "en": "https://…",
+      "fr": "https://…"
+    },
+    "detail.aliases": {
+      "en": "Extra slugs",
+      "fr": "Slugs supplémentaires"
+    },
+    "detail.aliases.none": {
+      "en": "None. Another slug can open the same link.",
+      "fr": "Aucun. Un autre slug peut ouvrir le même lien."
+    },
+    "detail.aliases.add": {
+      "en": "Add",
+      "fr": "Ajouter"
+    },
+    "detail.aliases.label": {
+      "en": "New slug for this link",
+      "fr": "Nouveau slug pour ce lien"
+    },
+    "detail.aliases.placeholder": {
+      "en": "another-slug",
+      "fr": "autre-slug"
+    },
+    "detail.aliases.hint": {
+      "en": "Another slug that opens the same link, sharing its stats.",
+      "fr": "Un autre slug qui ouvre le même lien et partage ses statistiques."
+    },
+    "detail.section.access": {
+      "en": "Access",
+      "fr": "Accès"
+    },
+    "detail.password": {
+      "en": "Password",
+      "fr": "Mot de passe"
+    },
+    "detail.password.on": {
+      "en": "On",
+      "fr": "Activé"
+    },
+    "detail.password.off": {
+      "en": "Off",
+      "fr": "Désactivé"
+    },
+    "detail.password.remove": {
+      "en": "Remove",
+      "fr": "Retirer"
+    },
+    "detail.password.set": {
+      "en": "Set",
+      "fr": "Définir"
+    },
+    "detail.password.label": {
+      "en": "Password for this link",
+      "fr": "Mot de passe pour ce lien"
+    },
+    "detail.expires": {
+      "en": "Expires",
+      "fr": "Expiration"
+    },
+    "detail.disabled": {
+      "en": "disabled",
+      "fr": "désactivé"
+    },
+    "detail.revive": {
+      "en": "Revive",
+      "fr": "Réactiver"
+    },
+    "detail.section.deletion": {
+      "en": "Deletion",
+      "fr": "Suppression"
+    },
+    "detail.delete.explain": {
+      "en": "The link stops working and its slug is never handed out again.",
+      "fr": "Le lien cesse de fonctionner et son slug ne sera plus jamais réattribué."
+    },
+    "detail.delete.confirm_explain": {
+      "en": "Confirm: the link stops working immediately.",
+      "fr": "Confirmez : le lien cesse de fonctionner immédiatement."
+    },
+    "detail.delete": {
+      "en": "Delete",
+      "fr": "Supprimer"
+    },
+    "detail.delete.confirm": {
+      "en": "Confirm",
+      "fr": "Confirmer"
+    },
+    "settings.title": {
+      "en": "Settings",
+      "fr": "Réglages"
+    },
+    "settings.close": {
+      "en": "Close",
+      "fr": "Fermer"
+    },
+    "settings.section.domains": {
+      "en": "Domains",
+      "fr": "Domaines"
+    },
+    "settings.domain.used_for_new": {
+      "en": "used for new links",
+      "fr": "utilisé pour les nouveaux liens"
+    },
+    "settings.domain.available": {
+      "en": "available",
+      "fr": "disponible"
+    },
+    "settings.domain.default_badge": {
+      "en": "default",
+      "fr": "par défaut"
+    },
+    "settings.domain.make_default": {
+      "en": "Make default",
+      "fr": "Définir par défaut"
+    },
+    "settings.domain.remove": {
+      "en": "Remove {host}",
+      "fr": "Retirer {host}"
+    },
+    "settings.domain.add": {
+      "en": "Add",
+      "fr": "Ajouter"
+    },
+    "settings.domain.note": {
+      "en": "A domain added here also has to point at this server and have a certificate. Links already made keep the domain they were created on.",
+      "fr": "Un domaine ajouté ici doit aussi pointer vers ce serveur et disposer d’un certificat. Les liens existants gardent le domaine sur lequel ils ont été créés."
+    },
+    "settings.section.new_links": {
+      "en": "New links",
+      "fr": "Nouveaux liens"
+    },
+    "settings.slug_length": {
+      "en": "Code length",
+      "fr": "Longueur du code"
+    },
+    "settings.slug_length.value": {
+      "en": "{n} characters",
+      "fr": "{n} caractères"
+    },
+    "settings.slug_length.shorter": {
+      "en": "Shorter code",
+      "fr": "Code plus court"
+    },
+    "settings.slug_length.longer": {
+      "en": "Longer code",
+      "fr": "Code plus long"
+    },
+    "settings.default_expiry": {
+      "en": "Default expiry",
+      "fr": "Expiration par défaut"
+    },
+    "settings.default_expiry.never": {
+      "en": "Never",
+      "fr": "Jamais"
+    },
+    "settings.default_expiry.tonight": {
+      "en": "Tonight",
+      "fr": "Ce soir"
+    },
+    "settings.default_expiry.7d": {
+      "en": "7 days",
+      "fr": "7 jours"
+    },
+    "settings.default_expiry.30d": {
+      "en": "30 days",
+      "fr": "30 jours"
+    },
+    "settings.auto_copy": {
+      "en": "Copy after creating",
+      "fr": "Copier après création"
+    },
+    "settings.auto_copy.note": {
+      "en": "The link goes straight to your clipboard.",
+      "fr": "Le lien part directement dans votre presse-papiers."
+    },
+    "settings.auto_paste": {
+      "en": "Paste on open",
+      "fr": "Coller à l’ouverture"
+    },
+    "settings.auto_paste.note": {
+      "en": "Where the browser allows it.",
+      "fr": "Là où le navigateur l’autorise."
+    },
+    "settings.section.appearance": {
+      "en": "Appearance",
+      "fr": "Apparence"
+    },
+    "settings.theme": {
+      "en": "Theme",
+      "fr": "Thème"
+    },
+    "settings.theme.note": {
+      "en": "Kept with your account, so it follows you between devices.",
+      "fr": "Conservé avec votre compte : il vous suit d’un appareil à l’autre."
+    },
+    "settings.theme.auto": {
+      "en": "Auto",
+      "fr": "Auto"
+    },
+    "settings.theme.light": {
+      "en": "Light",
+      "fr": "Clair"
+    },
+    "settings.theme.dark": {
+      "en": "Dark",
+      "fr": "Sombre"
+    },
+    "settings.section.account": {
+      "en": "Account",
+      "fr": "Compte"
+    },
+    "settings.signed_in": {
+      "en": "Signed in",
+      "fr": "Connecté"
+    },
+    "settings.signout": {
+      "en": "Sign out",
+      "fr": "Se déconnecter"
+    },
+    "expiry.1h": {
+      "en": "In 1 hour",
+      "fr": "Dans 1 heure"
+    },
+    "expiry.1h.short": {
+      "en": "in 1 hour",
+      "fr": "dans 1 heure"
+    },
+    "expiry.1h.compact": {
+      "en": "+1 hour",
+      "fr": "+1 h"
+    },
+    "expiry.today": {
+      "en": "End of today",
+      "fr": "Fin de journée"
+    },
+    "expiry.today.short": {
+      "en": "end of today",
+      "fr": "fin de journée"
+    },
+    "expiry.today.compact": {
+      "en": "tonight",
+      "fr": "ce soir"
+    },
+    "expiry.7d": {
+      "en": "In 7 days",
+      "fr": "Dans 7 jours"
+    },
+    "expiry.7d.short": {
+      "en": "in 7 days",
+      "fr": "dans 7 jours"
+    },
+    "expiry.7d.compact": {
+      "en": "+7 days",
+      "fr": "+7 j"
+    },
+    "expiry.30d": {
+      "en": "In 30 days",
+      "fr": "Dans 30 jours"
+    },
+    "expiry.30d.short": {
+      "en": "in 30 days",
+      "fr": "dans 30 jours"
+    },
+    "expiry.30d.compact": {
+      "en": "+30 days",
+      "fr": "+30 j"
+    },
+    "expiry.never.compact": {
+      "en": "never",
+      "fr": "jamais"
+    },
+    "time.never": {
+      "en": "never",
+      "fr": "jamais"
+    },
+    "time.just_now": {
+      "en": "just now",
+      "fr": "à l’instant"
+    },
+    "http.error": {
+      "en": "Error {status}",
+      "fr": "Erreur {status}"
+    }
+  },
+  "errors": {
+    "could not read that request": {
+      "en": "could not read that request",
+      "fr": "requête illisible"
+    },
+    "code length must be between 4 and 12": {
+      "en": "code length must be between 4 and 12",
+      "fr": "la longueur du code doit être comprise entre 4 et 12"
+    },
+    "unknown default expiry": {
+      "en": "unknown default expiry",
+      "fr": "expiration par défaut inconnue"
+    },
+    "unknown theme": {
+      "en": "unknown theme",
+      "fr": "thème inconnu"
+    },
+    "could not save your preferences": {
+      "en": "could not save your preferences",
+      "fr": "impossible d’enregistrer vos préférences"
+    },
+    "could not load the domains": {
+      "en": "could not load the domains",
+      "fr": "impossible de charger les domaines"
+    },
+    "that domain is not valid": {
+      "en": "that domain is not valid",
+      "fr": "ce domaine n’est pas valide"
+    },
+    "that domain is already registered": {
+      "en": "that domain is already registered",
+      "fr": "ce domaine est déjà enregistré"
+    },
+    "could not add the domain": {
+      "en": "could not add the domain",
+      "fr": "impossible d’ajouter le domaine"
+    },
+    "invalid identifier": {
+      "en": "invalid identifier",
+      "fr": "identifiant invalide"
+    },
+    "could not change the default domain": {
+      "en": "could not change the default domain",
+      "fr": "impossible de changer le domaine par défaut"
+    },
+    "could not load the links": {
+      "en": "could not load the links",
+      "fr": "impossible de charger les liens"
+    },
+    "no domain configured": {
+      "en": "no domain configured",
+      "fr": "aucun domaine configuré"
+    },
+    "could not check that slug": {
+      "en": "could not check that slug",
+      "fr": "impossible de vérifier ce slug"
+    },
+    "could not look that up": {
+      "en": "could not look that up",
+      "fr": "la recherche a échoué"
+    },
+    "invalid destination: an http or https address is expected": {
+      "en": "invalid destination: an http or https address is expected",
+      "fr": "destination invalide : une adresse http ou https est attendue"
+    },
+    "invalid destination": {
+      "en": "invalid destination",
+      "fr": "destination invalide"
+    },
+    "invalid expiry date": {
+      "en": "invalid expiry date",
+      "fr": "date d’expiration invalide"
+    },
+    "could not protect the link": {
+      "en": "could not protect the link",
+      "fr": "impossible de protéger le lien"
+    },
+    "could not generate a code": {
+      "en": "could not generate a code",
+      "fr": "impossible de générer un code"
+    },
+    "could not create the link": {
+      "en": "could not create the link",
+      "fr": "impossible de créer le lien"
+    },
+    "could not find a free code": {
+      "en": "could not find a free code",
+      "fr": "impossible de trouver un code libre"
+    },
+    "that slug is already in use": {
+      "en": "that slug is already in use",
+      "fr": "ce slug est déjà utilisé"
+    },
+    "that slug is reserved": {
+      "en": "that slug is reserved",
+      "fr": "ce slug est réservé"
+    },
+    "invalid slug": {
+      "en": "invalid slug",
+      "fr": "slug invalide"
+    },
+    "link not found": {
+      "en": "link not found",
+      "fr": "lien introuvable"
+    },
+    "could not load the link": {
+      "en": "could not load the link",
+      "fr": "impossible de charger le lien"
+    },
+    "could not add that": {
+      "en": "could not add that",
+      "fr": "l’ajout a échoué"
+    },
+    "the last domain cannot be removed": {
+      "en": "the last domain cannot be removed",
+      "fr": "le dernier domaine ne peut pas être retiré"
+    },
+    "that domain still has links": {
+      "en": "that domain still has links",
+      "fr": "des liens utilisent encore ce domaine"
+    },
+    "sign in to continue": {
+      "en": "sign in to continue",
+      "fr": "connectez-vous pour continuer"
+    },
+    "internal error": {
+      "en": "internal error",
+      "fr": "erreur interne"
+    }
+  },
+  "visitor": {
+    "gate.title": {
+      "en": "Protected link",
+      "fr": "Lien protégé"
+    },
+    "gate.heading": {
+      "en": "This link is protected",
+      "fr": "Ce lien est protégé"
+    },
+    "gate.body": {
+      "en": "Enter the password you were given to continue.",
+      "fr": "Saisissez le mot de passe qui vous a été communiqué pour continuer."
+    },
+    "gate.placeholder": {
+      "en": "Password",
+      "fr": "Mot de passe"
+    },
+    "gate.submit": {
+      "en": "Open the link",
+      "fr": "Ouvrir le lien"
+    },
+    "gate.wrong": {
+      "en": "That password does not work.",
+      "fr": "Ce mot de passe ne fonctionne pas."
+    },
+    "expired.title": {
+      "en": "Expired link",
+      "fr": "Lien expiré"
+    },
+    "expired.heading": {
+      "en": "This link has expired",
+      "fr": "Ce lien a expiré"
+    },
+    "expired.body": {
+      "en": "Ask whoever sent it to you for an up-to-date link.",
+      "fr": "Demandez un lien à jour à la personne qui vous l’a envoyé."
+    },
+    "expired.body_dated": {
+      "en": "It stopped working on {date}. Ask whoever sent it to you for an up-to-date link.",
+      "fr": "Il a cessé de fonctionner le {date}. Demandez un lien à jour à la personne qui vous l’a envoyé."
+    },
+    "missing.title": {
+      "en": "Link not found",
+      "fr": "Lien introuvable"
+    },
+    "missing.heading": {
+      "en": "This link does not exist",
+      "fr": "Ce lien n’existe pas"
+    },
+    "missing.body": {
+      "en": "Check the address: a letter or a digit may have been copied wrong.",
+      "fr": "Vérifiez l’adresse : une lettre ou un chiffre a peut-être été mal recopié."
+    },
+    "throttled.title": {
+      "en": "Too many tries",
+      "fr": "Trop de tentatives"
+    },
+    "throttled.heading": {
+      "en": "Too many tries",
+      "fr": "Trop de tentatives"
+    },
+    "throttled.body": {
+      "en": "Wait a minute before trying again.",
+      "fr": "Patientez une minute avant de réessayer."
+    }
+  },
+  "months": {
+    "en": [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December"
+    ],
+    "fr": [
+      "janvier",
+      "février",
+      "mars",
+      "avril",
+      "mai",
+      "juin",
+      "juillet",
+      "août",
+      "septembre",
+      "octobre",
+      "novembre",
+      "décembre"
+    ]
+  }
+}
