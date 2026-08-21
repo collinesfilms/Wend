@@ -1,0 +1,13 @@
+{
+  "name": "Collines Go",
+  "short_name": "Go",
+  "description": "Raccourcisseur de liens de Collines",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ECEEEA",
+  "theme_color": "#ECEEEA",
+  "icons": [
+    { "src": "/_/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

@@ -1,0 +1,25 @@
+services:
+  collinesgo:
+    build: .
+    image: collinesgo:latest
+    container_name: collinesgo
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data
+    environment:
+      # Où l'interface d'administration est servie.
+      CG_BASE_URL: ${CG_BASE_URL:?https://go.collines.co}
+      # Domaines courts, séparés par des virgules. Le premier est celui utilisé
+      # par défaut pour les nouveaux liens.
+      CG_SHORT_DOMAINS: ${CG_SHORT_DOMAINS:-}
+      # PocketID.
+      CG_OIDC_ISSUER: ${CG_OIDC_ISSUER:?https://id.collines.co}
+      CG_OIDC_CLIENT_ID: ${CG_OIDC_CLIENT_ID:?}
+      CG_OIDC_CLIENT_SECRET: ${CG_OIDC_CLIENT_SECRET:?}
+      # 32 caractères aléatoires. S'il change, tout le monde est déconnecté.
+      CG_SESSION_KEY: ${CG_SESSION_KEY:?}
+      # Le serveur est derrière un reverse proxy qui pose X-Forwarded-For.
+      CG_TRUST_PROXY: ${CG_TRUST_PROXY:-true}
+      TZ: ${TZ:-Europe/Paris}

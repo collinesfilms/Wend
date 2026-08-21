@@ -1,0 +1,8 @@
+.git
+data
+design
+web/node_modules
+web/dist
+**/*.db
+**/*.db-wal
+**/*.db-shm

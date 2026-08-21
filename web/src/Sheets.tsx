@@ -1,0 +1,585 @@
+import { useEffect, useState } from 'react'
+import { api, ApiError, type Domain, type Link, type Settings, type User } from './api'
+import { copyText } from './clipboard'
+import { age, destLabel, EXPIRY_PRESETS, expiryToDate, relative, shortDate, type ExpiryKey } from './format'
+import * as I from './icons'
+
+/** Seven days as an area: enough to read the shape, no more. */
+function Spark({ series }: { series: number[] }) {
+  const max = Math.max(1, ...series)
+  const w = 100
+  const h = 20
+  const step = w / (series.length - 1)
+  const pts = series.map((v, i) => [i * step, h - (v / max) * (h - 3) - 1.5] as const)
+  const line = pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ')
+  const area = `M0,${h} L${pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' L')} L${w},${h} Z`
+  return (
+    <svg
+      className="chart"
+      viewBox={`0 0 ${w} ${h}`}
+      preserveAspectRatio="none"
+      style={{ width: '100%', height: h }}
+      fill="none"
+      aria-hidden="true"
+    >
+      <path d={area} fill="currentColor" opacity=".14" />
+      <polyline
+        points={line}
+        stroke="currentColor"
+        strokeWidth="1.5"
+        vectorEffect="non-scaling-stroke"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        opacity=".8"
+      />
+    </svg>
+  )
+}
+
+// ---------------------------------------------------------------- liste
+
+type LinksSheetProps = {
+  open: boolean
+  links: Link[]
+  onOpenDetail: (id: number) => void
+  onClose: () => void
+  onQrFull: (link: Link) => void
+  onToast: (message: string, bad?: boolean) => void
+}
+
+export function LinksSheet({ open, links, onOpenDetail, onClose, onQrFull, onToast }: LinksSheetProps) {
+  const [filter, setFilter] = useState<'all' | 'live' | 'expired'>('all')
+  const [query, setQuery] = useState('')
+  const [copiedId, setCopiedId] = useState<number | null>(null)
+
+  const visible = links.filter((l) => {
+    const dead = l.expired || l.disabled
+    if (filter === 'live' && dead) return false
+    if (filter === 'expired' && !dead) return false
+    if (query && !`${l.slug} ${l.dest}`.toLowerCase().includes(query.toLowerCase())) return false
+    return true
+  })
+
+  const copyRow = async (link: Link) => {
+    const ok = await copyText(link.short_url)
+    if (!ok) return onToast('Votre navigateur a bloqué le presse-papier', true)
+    setCopiedId(link.id)
+    window.setTimeout(() => setCopiedId(null), 900)
+  }
+
+  return (
+    <div className={`sheet${open ? ' on' : ''}`} role="dialog" aria-label="Liens">
+      <div className="grip" />
+      <div className="sheet-head">
+        <h2>Liens</h2>
+        <span className="n tnum">{links.length}</span>
+        <button className="sheet-close" onClick={onClose} aria-label="Fermer">
+          <I.X size={16} width={1.9} />
+        </button>
+      </div>
+      <div className="sheet-tools">
+        <label className="search">
+          <I.Search size={15} width={1.8} />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Rechercher un lien"
+            autoComplete="off"
+          />
+        </label>
+        <div className="filters">
+          {([['all', 'Tous'], ['live', 'Actifs'], ['expired', 'Expirés']] as const).map(([key, label]) => (
+            <button key={key} className={filter === key ? 'sel' : ''} onClick={() => setFilter(key)}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="rows">
+        {visible.length === 0 && (
+          <div className="empty-note">
+            {links.length === 0 ? 'Aucun lien pour l’instant.' : 'Aucun lien ne correspond.'}
+          </div>
+        )}
+        {visible.map((l) => {
+          const dead = l.expired || l.disabled
+          return (
+            <div
+              key={l.id}
+              className={`row${dead ? ' expired' : ''}`}
+              onClick={() => onOpenDetail(l.id)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => e.key === 'Enter' && onOpenDetail(l.id)}
+            >
+              <span className="r-slug">
+                <span className="pin" />/{l.slug}
+                {l.has_password && <I.Lock size={11} width={2.2} className="pw" />}
+              </span>
+              <span className="r-dest">{destLabel(l.dest)}</span>
+              <span className="r-meta">
+                <span className="r-when">{l.disabled ? 'désactivé' : relative(l.expires_at)}</span>
+                <span className="r-opens">
+                  <I.Out size={12} />
+                  {l.clicks}
+                </span>
+              </span>
+              <span className="row-acts" onClick={(e) => e.stopPropagation()}>
+                <button
+                  aria-label="Copier"
+                  style={copiedId === l.id ? { color: 'var(--ok)' } : undefined}
+                  onClick={() => void copyRow(l)}
+                >
+                  {copiedId === l.id ? <I.Check size={14} width={2.2} /> : <I.Copy size={14} width={1.8} />}
+                </button>
+                <button aria-label="Code QR" onClick={() => onQrFull(l)}>
+                  <I.Qr size={14} width={1.7} />
+                </button>
+              </span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------- détail
+
+type DetailSheetProps = {
+  open: boolean
+  link: Link | null
+  from: 'list' | 'direct'
+  onBack: () => void
+  onChanged: (link: Link | null) => void
+  onToast: (message: string, bad?: boolean) => void
+}
+
+export function DetailSheet({ open, link, from, onBack, onChanged, onToast }: DetailSheetProps) {
+  const [pending, setPending] = useState<string | null>(null)
+  const [aliasDraft, setAliasDraft] = useState('')
+  const [addingAlias, setAddingAlias] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+
+  useEffect(() => {
+    setConfirmDelete(false)
+    setAddingAlias(false)
+    setAliasDraft('')
+  }, [link?.id])
+
+  if (!link) return <div className="sheet auto" aria-hidden="true" />
+
+  const act = async (key: string, run: () => Promise<Link | null>) => {
+    setPending(key)
+    try {
+      onChanged(await run())
+    } catch (err) {
+      onToast(err instanceof ApiError ? err.message : 'Action impossible', true)
+    } finally {
+      setPending(null)
+    }
+  }
+
+  const dead = link.expired || link.disabled
+
+  return (
+    <div className={`sheet auto${open ? ' on' : ''}`} role="dialog" aria-label="Détail du lien">
+      <div className="grip" />
+      <div className="detail-head">
+        <button className="back" onClick={onBack} aria-label={from === 'list' ? 'Retour aux liens' : 'Fermer'}>
+          {from === 'list' ? <I.Back size={17} width={1.9} /> : <I.X size={17} width={1.9} />}
+        </button>
+        <span className="t">
+          <span className="s mono">/{link.slug}</span>
+          <span className="d">{destLabel(link.dest)}</span>
+        </span>
+      </div>
+      <div className={`detail-body${pending ? ' busy' : ''}`}>
+        <div className="stats-strip">
+          <div className="stat-tile">
+            <div className="k">Ouvertures</div>
+            <div className="v">{link.clicks}</div>
+            {link.clicks ? <Spark series={link.series} /> : <span className="sub">rien encore</span>}
+          </div>
+          <div className="stat-tile">
+            <div className="k">Personnes</div>
+            <div className="v">{link.uniques}</div>
+            <span className="sub">
+              {link.clicks ? `${Math.round((link.uniques / link.clicks) * 100)} % du total` : 'rien encore'}
+            </span>
+          </div>
+          <div className="stat-tile">
+            <div className="k">Créé</div>
+            <div className="v sm">{shortDate(link.created_at)}</div>
+            <span className="sub">{age(link.created_at)}</span>
+          </div>
+        </div>
+
+        <div className="sec-title">Lien</div>
+        <div className="sec">
+          <div className="sec-row">
+            <span className="k">Lien court</span>
+            <span className="v mono">{link.short_url.replace(/^https:\/\//, '')}</span>
+            <button
+              className="mini"
+              onClick={async () => {
+                const ok = await copyText(link.short_url)
+                onToast(ok ? 'Lien copié' : 'Votre navigateur a bloqué le presse-papier', !ok)
+              }}
+            >
+              Copier
+            </button>
+          </div>
+          <div className="sec-row">
+            <span className="k">Destination</span>
+            <span className="v">{destLabel(link.dest)}</span>
+            <button
+              className="mini"
+              onClick={() => {
+                const next = window.prompt('Nouvelle destination', link.dest)
+                if (next && next !== link.dest) {
+                  void act('dest', () => api.updateLink(link.id, { dest: next }))
+                }
+              }}
+            >
+              Modifier
+            </button>
+          </div>
+          <div className="sec-row">
+            <span className="k">Slug additionnel</span>
+            <span className="v" style={{ color: link.aliases.length ? undefined : 'var(--ink-3)' }}>
+              {link.aliases.length ? link.aliases.map((a) => `/${a.slug}`).join(' · ') : 'aucun'}
+            </span>
+            <button className="mini accent" onClick={() => setAddingAlias((v) => !v)}>
+              {addingAlias ? 'Fermer' : 'Ajouter'}
+            </button>
+          </div>
+          {addingAlias && (
+            <div className="add-domain">
+              <input
+                value={aliasDraft}
+                onChange={(e) => setAliasDraft(e.target.value)}
+                placeholder="autre-slug"
+                autoComplete="off"
+                spellCheck={false}
+              />
+              <button
+                className="mini accent"
+                disabled={!aliasDraft.trim()}
+                onClick={() =>
+                  void act('alias', async () => {
+                    const updated = await api.addAlias(link.id, aliasDraft.trim().toLowerCase())
+                    setAliasDraft('')
+                    setAddingAlias(false)
+                    return updated
+                  })
+                }
+              >
+                Ajouter
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="sec-title">Accès</div>
+        <div className="sec">
+          <div className="sec-row">
+            <span className="k">Mot de passe</span>
+            <span className="v">{link.has_password ? 'Activé' : 'Désactivé'}</span>
+            <button
+              className="mini"
+              onClick={() => {
+                if (link.has_password) {
+                  void act('pass', () => api.updateLink(link.id, { password: '' }))
+                  return
+                }
+                const next = window.prompt('Mot de passe pour ce lien')
+                if (next) void act('pass', () => api.updateLink(link.id, { password: next }))
+              }}
+            >
+              {link.has_password ? 'Retirer' : 'Définir'}
+            </button>
+          </div>
+          <div className="sec-row">
+            <span className="k">Expiration</span>
+            <span className="v" style={dead ? { color: 'var(--danger)' } : undefined}>
+              {link.disabled ? 'désactivé' : relative(link.expires_at)}
+            </span>
+            <ExpiryButton link={link} dead={dead} onAct={act} />
+          </div>
+        </div>
+
+        <div className="sec-title">Suppression</div>
+        <div className="sec">
+          <div className="sec-row wide">
+            <span className="v">
+              {confirmDelete
+                ? 'Confirmez : le lien cessera de fonctionner immédiatement.'
+                : 'Le lien cesse de fonctionner et son slug ne sera jamais réattribué.'}
+            </span>
+            <button
+              className="mini warn"
+              onClick={() => {
+                if (!confirmDelete) return setConfirmDelete(true)
+                void act('delete', async () => {
+                  await api.deleteLink(link.id)
+                  return null
+                })
+              }}
+            >
+              {confirmDelete ? 'Confirmer' : 'Supprimer'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ExpiryButton({
+  link,
+  dead,
+  onAct,
+}: {
+  link: Link
+  dead: boolean
+  onAct: (key: string, run: () => Promise<Link | null>) => Promise<void>
+}) {
+  const [open, setOpen] = useState(false)
+  if (!open) {
+    return (
+      <button className={`mini${dead ? ' accent' : ''}`} onClick={() => setOpen(true)}>
+        {dead ? 'Réactiver' : 'Modifier'}
+      </button>
+    )
+  }
+  const set = (key: ExpiryKey | 'never') => {
+    setOpen(false)
+    void onAct('exp', () =>
+      api.updateLink(link.id, {
+        expires_at: key === 'never' ? '' : expiryToDate(key).toISOString(),
+        disabled: false,
+      }),
+    )
+  }
+  return (
+    <span className="acts" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+      {EXPIRY_PRESETS.map((p) => (
+        <button key={p.key} className="mini" style={{ minWidth: 0 }} onClick={() => set(p.key)}>
+          {p.label.replace('Dans ', '+').replace('Fin de journée', 'ce soir')}
+        </button>
+      ))}
+      <button className="mini" style={{ minWidth: 0 }} onClick={() => set('never')}>
+        jamais
+      </button>
+    </span>
+  )
+}
+
+// ---------------------------------------------------------------- réglages
+
+type SettingsSheetProps = {
+  open: boolean
+  user: User
+  domains: Domain[]
+  settings: Settings
+  onClose: () => void
+  onDomains: (domains: Domain[]) => void
+  onSettings: (settings: Settings) => void
+  onSignOut: () => void
+  onToast: (message: string, bad?: boolean) => void
+}
+
+export function SettingsSheet({
+  open,
+  user,
+  domains,
+  settings,
+  onClose,
+  onDomains,
+  onSettings,
+  onSignOut,
+  onToast,
+}: SettingsSheetProps) {
+  const [host, setHost] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const refreshDomains = async () => {
+    const me = await api.me()
+    onDomains(me.domains)
+  }
+
+  const guard = async (run: () => Promise<void>) => {
+    setBusy(true)
+    try {
+      await run()
+    } catch (err) {
+      onToast(err instanceof ApiError ? err.message : 'Action impossible', true)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const save = (next: Settings) =>
+    guard(async () => {
+      onSettings(await api.saveSettings(next))
+    })
+
+  return (
+    <div className={`sheet auto${open ? ' on' : ''}`} role="dialog" aria-label="Réglages">
+      <div className="grip" />
+      <div className="detail-head">
+        <button className="back" onClick={onClose} aria-label="Fermer">
+          <I.X size={17} width={1.9} />
+        </button>
+        <span className="t">
+          <span className="s">Réglages</span>
+          <span className="d">{user.email || user.name}</span>
+        </span>
+      </div>
+      <div className={`detail-body${busy ? ' busy' : ''}`}>
+        <div className="sec-title">Domaines</div>
+        <div className="sec set-domains">
+          {domains.map((d) => (
+            <div className="domain-row" key={d.id}>
+              <span className="host">{d.host}</span>
+              <span className="tagline">
+                {d.is_default ? 'utilisé pour les nouveaux liens' : 'disponible'}
+              </span>
+              <span className="acts">
+                {d.is_default ? (
+                  <span className="badge">défaut</span>
+                ) : (
+                  <>
+                    <button
+                      className="mini accent"
+                      onClick={() => guard(async () => {
+                        await api.setDefaultDomain(d.id)
+                        await refreshDomains()
+                      })}
+                    >
+                      Par défaut
+                    </button>
+                    <button
+                      className="mini warn"
+                      style={{ minWidth: 0 }}
+                      aria-label={`Retirer ${d.host}`}
+                      onClick={() => guard(async () => {
+                        await api.deleteDomain(d.id)
+                        await refreshDomains()
+                      })}
+                    >
+                      <I.Trash size={14} width={1.8} />
+                    </button>
+                  </>
+                )}
+              </span>
+            </div>
+          ))}
+          <div className="add-domain">
+            <input
+              value={host}
+              onChange={(e) => setHost(e.target.value)}
+              placeholder="clns.li"
+              autoComplete="off"
+              spellCheck={false}
+            />
+            <button
+              className="mini accent"
+              disabled={!host.trim()}
+              onClick={() => guard(async () => {
+                await api.addDomain(host.trim())
+                setHost('')
+                await refreshDomains()
+                onToast('Domaine ajouté. Faites-le pointer vers ce serveur.')
+              })}
+            >
+              Ajouter
+            </button>
+          </div>
+        </div>
+        <p className="empty-note" style={{ padding: '0 2px', textAlign: 'left', fontSize: 11.5 }}>
+          Un domaine ajouté ici doit aussi pointer vers ce serveur et avoir son
+          certificat. Les liens déjà créés gardent le domaine sur lequel ils sont nés.
+        </p>
+
+        <div className="sec-title">Nouveaux liens</div>
+        <div className="sec">
+          <div className="sec-row">
+            <span className="k">Longueur du code</span>
+            <span className="v mono">{settings.slug_length} caractères</span>
+            <span className="acts" style={{ display: 'flex', gap: 6 }}>
+              <button
+                className="mini"
+                style={{ minWidth: 0 }}
+                disabled={settings.slug_length <= 4}
+                onClick={() => save({ ...settings, slug_length: settings.slug_length - 1 })}
+              >
+                −
+              </button>
+              <button
+                className="mini"
+                style={{ minWidth: 0 }}
+                disabled={settings.slug_length >= 12}
+                onClick={() => save({ ...settings, slug_length: settings.slug_length + 1 })}
+              >
+                +
+              </button>
+            </span>
+          </div>
+          <div className="sec-row wide" style={{ display: 'block' }}>
+            <div className="k" style={{ marginBottom: 8 }}>Expiration par défaut</div>
+            <div className="seg">
+              {([['never', 'Jamais'], ['today', 'Ce soir'], ['7d', '7 jours'], ['30d', '30 jours']] as const).map(
+                ([key, label]) => (
+                  <button
+                    key={key}
+                    className={settings.default_expiry === key ? 'sel' : ''}
+                    onClick={() => save({ ...settings, default_expiry: key })}
+                  >
+                    {label}
+                  </button>
+                ),
+              )}
+            </div>
+          </div>
+          <div className="sec-row">
+            <span className="k">Copier après création</span>
+            <span className="v" style={{ color: 'var(--ink-3)', fontSize: 11.5 }}>
+              Le lien part directement dans le presse-papier.
+            </span>
+            <button
+              className={`switch${settings.auto_copy ? ' on' : ''}`}
+              role="switch"
+              aria-checked={settings.auto_copy}
+              aria-label="Copier après création"
+              onClick={() => save({ ...settings, auto_copy: !settings.auto_copy })}
+            />
+          </div>
+          <div className="sec-row">
+            <span className="k">Coller à l’ouverture</span>
+            <span className="v" style={{ color: 'var(--ink-3)', fontSize: 11.5 }}>
+              Là où le navigateur l’autorise.
+            </span>
+            <button
+              className={`switch${settings.auto_paste ? ' on' : ''}`}
+              role="switch"
+              aria-checked={settings.auto_paste}
+              aria-label="Coller à l’ouverture"
+              onClick={() => save({ ...settings, auto_paste: !settings.auto_paste })}
+            />
+          </div>
+        </div>
+
+        <div className="sec-title">Compte</div>
+        <div className="sec">
+          <div className="sec-row">
+            <span className="k">Connecté</span>
+            <span className="v">{user.name || user.email}</span>
+            <button className="mini warn" onClick={onSignOut}>Déconnexion</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
