@@ -381,25 +381,38 @@ input:focus{outline:none;}
 .result.on{opacity:1;pointer-events:auto;transform:none;transition-delay:120ms;}
 .link-plate{
   position:relative;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
-  height:112px;
-  background:var(--raised);border:1px solid var(--line);border-radius:var(--r-l);
+  height:124px;
+  background:var(--raised);
+  border:1px solid var(--line);
+  border-radius:var(--r-l);
+  display:grid;grid-template-rows:1fr 36px;
 }
+.link-plate .top{display:flex;align-items:center;justify-content:center;padding:0 20px;min-width:0;}
 .link-plate .short{
   font-family:var(--mono);font-size:20px;letter-spacing:-.015em;color:var(--ink-3);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
-.link-plate .short b{position:relative;color:var(--ink);font-weight:500;}
+.link-plate .short b{color:var(--ink);font-weight:500;}
 .link-plate .short b i{
   font-style:normal;display:inline-block;
   animation:mint 420ms var(--ease) both;
   animation-delay:calc(var(--i) * 36ms);
 }
 @keyframes mint{from{opacity:0;transform:translateY(7px);}to{opacity:1;transform:none;}}
-.link-plate .uline{
-  position:absolute;left:0;right:0;bottom:-7px;height:2px;border-radius:2px;
-  background:var(--clay);transform:scaleX(0);transform-origin:left center;
+/* la perforation : deux encoches et un trait pointillé, comme un ticket */
+.link-plate .perf{
+  position:absolute;left:11px;right:11px;top:calc(100% - 36px);
+  border-top:1px dashed var(--line);
 }
-.link-plate.minted .uline{transform:scaleX(1);transition:transform 560ms var(--ease);}
+.link-plate .notch{
+  position:absolute;top:calc(100% - 36px);
+  width:14px;height:14px;border-radius:50%;
+  background:var(--surface);
+  transform:translateY(-50%);
+}
+.link-plate .notch.l{left:-7px;}
+.link-plate .notch.r{right:-7px;}
+.link-plate .foot{display:flex;align-items:center;justify-content:center;}
 .link-plate .copied{
   display:flex;align-items:center;gap:5px;
   font-size:11.5px;font-weight:500;color:var(--ok);
@@ -409,18 +422,22 @@ input:focus{outline:none;}
 .link-plate .copied.on{opacity:1;transform:none;}
 
 .result-acts{display:flex;gap:8px;margin-top:10px;}
-.result-acts button{
+.result-acts button,.qr-acts button{
   height:44px;border-radius:var(--r-m);
   display:inline-flex;align-items:center;justify-content:center;gap:7px;
   font-size:13px;font-weight:500;
   transition:transform var(--t-fast) var(--ease), background var(--t-fast) var(--ease),
              color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
 }
-.result-acts button:hover{transform:translateY(-1px);}
-.result-acts button:active{transform:translateY(0) scale(.98);}
+.result-acts button:hover,.qr-acts button:hover{transform:translateY(-1px);}
+.result-acts button:active,.qr-acts button:active{transform:translateY(0) scale(.98);}
 .ra-copy{flex:1;background:var(--clay);color:var(--on-accent);box-shadow:0 3px 12px rgba(var(--clay-glow),.26);}
 .ra-side{flex:none;width:52px;background:var(--raised);border:1px solid var(--line);color:var(--ink-2);}
 .ra-side:hover{border-color:var(--line-2);color:var(--ink);}
+.ra-ghost{flex:none;padding:0 20px;background:var(--raised);border:1px solid var(--line);color:var(--ink-2);}
+.ra-ghost:hover{border-color:var(--line-2);color:var(--ink);}
+.ra-main{flex:1;background:var(--slate);color:var(--on-accent);box-shadow:0 3px 12px rgba(var(--slate-glow),.24);}
+.ra-main:hover{filter:brightness(1.06);}
 .result-meta{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:11px;min-height:22px;}
 .tag{
   display:inline-flex;align-items:center;gap:5px;
@@ -866,8 +883,11 @@ input:focus{outline:none;}
 
         <div class="result" id="resultView">
           <div class="link-plate" id="linkPlate">
-            <span class="short">go.collines.co/<b id="resSlug">x7kq2</b><i class="uline" aria-hidden="true"></i></span>
-            <span class="copied" id="copiedNote">Copié dans le presse-papier</span>
+            <span class="notch l" aria-hidden="true"></span>
+            <span class="notch r" aria-hidden="true"></span>
+            <i class="perf" aria-hidden="true"></i>
+            <span class="top"><span class="short">go.collines.co/<b id="resSlug">x7kq2</b></span></span>
+            <span class="foot"><span class="copied" id="copiedNote">Copié dans le presse-papier</span></span>
           </div>
           <div class="result-acts">
             <button class="ra-copy" id="copyBtn">
@@ -890,8 +910,8 @@ input:focus{outline:none;}
           <div class="qr-card"><canvas id="qrCanvas" width="168" height="168"></canvas></div>
           <div class="qr-url">go.collines.co/<b id="qrSlug">x7kq2</b></div>
           <div class="qr-acts">
-            <button class="pa-ghost" id="qrBack">Retour</button>
-            <button class="pa-main" id="qrBig" style="background:var(--slate)">Plein écran</button>
+            <button class="ra-ghost" id="qrBack">Retour</button>
+            <button class="ra-main" id="qrBig">Plein écran</button>
           </div>
         </div>
 
@@ -1343,7 +1363,7 @@ $('#loginBtn').addEventListener('click', () => setView('v-create'));
 const stage = $('#stage');
 const bigbtn = $('#bigbtn'), bigLbl = $('#bigLbl'), bigHint = $('#bigHint');
 const urlhead = $('#urlhead'), urlText = $('#urlText');
-const resultView = $('#resultView'), qrView = $('#qrView'), linkPlate = $('#linkPlate');
+const resultView = $('#resultView'), qrView = $('#qrView');
 const cells = [$('#cell-shorten'), $('#cell-slug'), $('#cell-pass'), $('#cell-exp')];
 const KIND  = ['shorten','slug','pass','exp'];
 const IDX   = {slug:1, pass:2, exp:3};
@@ -1418,7 +1438,6 @@ function resetAll(){
   Object.values(PANELS).forEach(p => p.classList.remove('on'));
   resultView.classList.remove('on');
   qrView.classList.remove('on');
-  linkPlate.classList.remove('minted');
   cells.forEach((c,i) => { c.className = 'cell c-'+KIND[i]; c.style.cssText=''; });
   urlhead.classList.remove('on');
   bigbtn.classList.remove('gone');
@@ -1634,9 +1653,6 @@ const CHECK = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" strok
 function mintSlug(slug){
   $('#resSlug').innerHTML = slug.split('')
     .map((ch,i) => '<i style="--i:'+i+'">'+ch+'</i>').join('');
-  linkPlate.classList.remove('minted');
-  const after = reduce ? 0 : slug.length*36 + 260;
-  setTimeout(() => linkPlate.classList.add('minted'), after);
 }
 
 async function shorten(){

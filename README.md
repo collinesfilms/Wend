@@ -59,6 +59,11 @@ without passing through the list.
 **Account** — the avatar opens by width only, keeping its height, into a
 single `Déconnexion` action. Clicking anywhere else dismisses it.
 
+**The created link** is presented as a tear-off ticket: the short URL above a
+perforation — two notches cut into the card's edges and a dashed rule between
+them — and the clipboard confirmation on the stub below. The slug settles in
+character by character as it arrives, then stays still.
+
 **Clipboard** — auto-paste is attempted on load and works where the browser
 grants clipboard-read without a gesture; everywhere else the paste button is
 one tap and the failure is invisible. Auto-copy on create hands the clipboard
