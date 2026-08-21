@@ -1,162 +1,264 @@
 # Collines Go
 
-A self-hosted URL shortener for `go.collines.co`, built around one gesture:
-open the tab, the link is already in the box, one tap puts the short URL on
-your clipboard. `Shortify` is only the repository name — the product is
-Collines Go.
+Raccourcisseur de liens auto-hébergé, pensé pour un seul geste : on ouvre
+l'onglet, le lien est déjà dans la boîte, une tape le met dans le presse-papier.
 
-The interface is in French throughout, admin and visitor pages alike.
+L'usage principal est de distribuer des liens à des étudiants pendant un cours.
+Les pages que voient les étudiants comptent donc autant que l'interface
+d'administration : elles sont dessinées, en français, et ne contactent personne.
 
-Primary use is handing links to students in class, so the visitor-facing
-pages matter as much as the admin UI.
+*Shortify est le nom du dépôt ; le produit s'appelle Collines Go.*
 
-## Running it
+---
+
+## Ce que ça fait
+
+**Créer un lien.** L'interface tente de coller automatiquement à l'ouverture.
+Là où le navigateur ne l'autorise pas — Safari, notamment — le grand bouton
+« Coller un lien » fait la même chose en une tape. Dès qu'un lien est reconnu,
+le bouton se divise en quatre :
+
+| | |
+|---|---|
+| **Raccourcir** | crée le lien et le copie |
+| **Slug** | choisir l'adresse plutôt qu'un code aléatoire |
+| **Mot de passe** | le lien demande un mot de passe avant de s'ouvrir |
+| **Expiration** | dans 1 heure, ce soir, 7 jours, 30 jours, ou une date |
+
+Chaque option ouvre son propre écran, puis revient avec son icône allumée.
+Rien n'est obligatoire : on peut aller directement sur « Raccourcir ».
+
+**Après création**, le lien apparaît sur un ticket détachable, déjà copié. Trois
+actions : copier de nouveau, afficher le code QR (plein écran pour un
+vidéoprojecteur), ou ouvrir la fiche du lien.
+
+**Le tableau de bord** s'ouvre depuis la pastille « Liens » en haut à gauche.
+Il liste les liens avec leur destination, leur expiration et leur nombre
+d'ouvertures. Un lien ouvre sa fiche : statistiques, destination, slug
+additionnel, mot de passe, expiration, suppression.
+
+**Les réglages** (l'engrenage, en haut à droite) gèrent les domaines courts, la
+longueur des codes générés, l'expiration par défaut et les deux comportements
+de presse-papier.
+
+---
+
+## Installation
+
+### Ce qu'il faut
+
+- Un NAS avec Docker (Container Manager sur Synology, ou Arcane, ou Portainer)
+- PocketID accessible en HTTPS
+- Un enregistrement DNS `go.collines.co` pointant sur le NAS
+
+### 1. Déclarer le client dans PocketID
+
+Créez un client OAuth2 :
+
+- **URL de redirection** : `https://go.collines.co/auth/callback`
+- **Type** : confidentiel (avec secret)
+- Autorisez les comptes qui doivent pouvoir créer des liens
+
+Il n'y a pas de compte à créer dans Collines Go. Si PocketID accorde la
+connexion, la personne entre ; si vous lui retirez l'accès dans PocketID, elle
+n'entre plus. C'est le seul endroit où l'autorisation se gère.
+
+### 2. Le `docker-compose.yml`
+
+```yaml
+services:
+  collinesgo:
+    image: ghcr.io/collinesfilms/shortify:latest
+    container_name: collinesgo
+    restart: unless-stopped
+    ports:
+      - "9018:8080"
+    volumes:
+      - ./data:/data
+    env_file:
+      - .env
+```
+
+### 3. Le `.env`, à côté
+
+```env
+CG_BASE_URL=https://go.collines.co
+CG_SHORT_DOMAINS=go.collines.co
+
+CG_OIDC_ISSUER=https://id.collines.co
+CG_OIDC_CLIENT_ID=
+CG_OIDC_CLIENT_SECRET=
+
+CG_SESSION_KEY=
+
+CG_TRUST_PROXY=true
+TZ=Europe/Paris
+```
+
+| Variable | À quoi ça sert |
+|---|---|
+| `CG_BASE_URL` | Adresse publique de l'interface. Sert aussi de domaine court. |
+| `CG_SHORT_DOMAINS` | Domaines courts, séparés par des virgules. Le premier est celui par défaut. |
+| `CG_OIDC_ISSUER` | L'URL de PocketID. |
+| `CG_OIDC_CLIENT_ID` / `_SECRET` | Le client créé à l'étape 1. |
+| `CG_SESSION_KEY` | 32 caractères aléatoires : `openssl rand -hex 32`. S'il change, tout le monde est déconnecté — les liens, eux, ne bougent pas. |
+| `CG_TRUST_PROXY` | `true` derrière le proxy de Synology. Sert à limiter les tentatives de mot de passe ; l'adresse n'est jamais enregistrée. |
+
+Le serveur vérifie tout au démarrage et refuse de partir en listant ce qui
+manque, plutôt que d'échouer à la première connexion.
+
+### 4. Le proxy inverse de Synology
+
+**Panneau de configuration → Portail de connexion → Proxy inverse → Créer**
+
+| | |
+|---|---|
+| Source | `https://go.collines.co`, port `443`, HSTS activé |
+| Destination | `http://localhost`, port `9018` |
+
+Dans **En-têtes personnalisés**, ajoutez le jeu **WebSocket** (il pose
+`Upgrade` et `Connection`, sans conséquence ici) — surtout, laissez Synology
+transmettre `Host` et `X-Forwarded-For`, ce qu'il fait par défaut. L'en-tête
+`Host` n'est pas décoratif : c'est lui qui indique sur quel domaine court le
+slug doit être cherché.
+
+Le certificat se gère dans **Panneau de configuration → Sécurité →
+Certificat**, avec Let's Encrypt.
+
+### 5. Démarrer
 
 ```sh
-cp .env.example .env      # fill in PocketID and a session key
 docker compose up -d
+docker compose logs -f
 ```
 
-One container, one SQLite file in `./data`, no other services. The image is
-about 30 MB and builds for amd64 and arm64 alike — the SQLite driver is pure
-Go, so there is no C toolchain involved in cross-compiling for a NAS.
+Puis ouvrez `https://go.collines.co` et connectez-vous avec PocketID.
 
-### PocketID
+> **L'image est publiée sur GHCR.** Si le dépôt est privé, le paquet l'est
+> aussi : rendez-le public dans **GitHub → Packages → shortify → Package
+> settings**, ou connectez le NAS avec
+> `docker login ghcr.io -u <utilisateur>` et un jeton personnel ayant la portée
+> `read:packages`.
 
-Create an OAuth2 client with the redirect URL
-`https://go.collines.co/auth/callback`, then grant it to the accounts that
-should be able to create links. That grant *is* the authorisation: there is no
-user management in this app, and revoking access in PocketID revokes it here.
+---
 
-### Reverse proxy
+## Au quotidien
 
-Every short domain has to reach this container and have its own certificate.
-With Caddy that is the whole configuration:
+### Ajouter un domaine plus court
 
-```caddyfile
-go.collines.co, clns.li {
-    reverse_proxy collinesgo:8080
-}
+1. Faites pointer le DNS du nouveau domaine sur le NAS
+2. Ajoutez une règle de proxy inverse vers le même port `9018`
+3. Ajoutez le certificat
+4. Dans **Réglages → Domaines**, ajoutez-le et marquez-le par défaut si besoin
+
+Les liens déjà créés gardent le domaine sur lequel ils sont nés : rien ne casse.
+Les nouveaux utilisent le domaine par défaut.
+
+### Sauvegarder
+
+Copiez `data/collinesgo.db` (et ses fichiers `-wal` et `-shm` s'ils existent).
+C'est tout l'état de l'application : les liens, les statistiques, les sessions.
+
+### Mettre à jour
+
+```sh
+docker compose pull && docker compose up -d
 ```
 
-Leave `CG_TRUST_PROXY=true` so the client address is read from
-`X-Forwarded-For`; it is used to rate-limit password attempts, never stored.
+Le schéma de base est appliqué au démarrage. Aucune migration à lancer à la main.
 
-### Adding a short domain later
+---
 
-Add it under Réglages → Domaines, point it at this server, and give it a
-certificate. Existing links keep the domain they were created on; new ones use
-whichever domain is marked as the default.
+## Comment c'est fait
 
-### Backups
+Un seul binaire Go, une seule base SQLite, aucune autre dépendance. L'interface
+compilée est embarquée dans le binaire : ce qui est déployé est un fichier.
 
-Copy `data/collinesgo.db` (plus `-wal` and `-shm` if present). That is the
-whole application state.
+Quelques décisions qui expliquent le comportement :
 
-## Development
+**Les redirections sont toujours des 302, jamais des 301.** Un 301 est mis en
+cache définitivement par les navigateurs et les proxies. Réactiver un lien
+expiré ou changer sa destination échouerait alors silencieusement, précisément
+pour les gens qui l'avaient déjà ouvert.
+
+**Un slug n'est jamais réattribué.** Supprimer un lien le retire du service mais
+garde son slug occupé pour toujours. Sans ça, un lien distribué au trimestre
+dernier enverrait un étudiant vers une destination inattendue.
+
+**Les codes générés évitent les caractères qu'on recopie mal** — pas de `i`, `l`,
+`o`, `0`, `1` — et la recherche est insensible à la casse : `go.collines.co/X7KQ2`
+fonctionne aussi.
+
+**Les liens protégés affichent une page à leur propre adresse**, pas ailleurs. Le
+mot de passe est stocké haché (bcrypt) et les tentatives sont limitées, pour
+qu'un lien protégé ne devienne pas un jeu de devinettes.
+
+**Les statistiques ne suivent personne.** Le compteur d'ouvertures distingue les
+visiteurs par une empreinte salée dont le sel change chaque jour et n'est jamais
+conservé : impossible de la recalculer ou de suivre quelqu'un d'un jour sur
+l'autre. Aucune adresse IP n'est enregistrée, aucun cookie n'est posé sur le
+chemin de redirection.
+
+**Les polices sont auto-hébergées.** Les pages d'erreur sont ce que chargent les
+étudiants ; elles n'ont pas à contacter un service tiers pour annoncer qu'un lien
+a expiré.
+
+**Le service worker ne met en cache que l'interface.** Toute autre navigation
+passe directement au réseau. Un cache qui répondrait à la place d'une redirection
+casserait des liens déjà distribués, silencieusement, et seulement pour les gens
+qui utilisent l'interface.
+
+**Les codes QR sont générés sur place**, sans bibliothèque tierce, et vérifiés
+module par module contre une implémentation de référence.
+
+---
+
+## Développement
 
 ```sh
 npm --prefix web ci
-npm --prefix web run build        # the binary embeds web/dist
+npm --prefix web run build     # le binaire embarque web/dist
 go run ./cmd/collinesgo
 ```
 
-For frontend work, `npm --prefix web run dev` proxies `/api` and `/auth` to a
-`go run` on :8080.
+Pour travailler sur l'interface, `npm --prefix web run dev` sert le front avec
+rechargement à chaud et redirige `/api` et `/auth` vers le `go run` sur :8080.
 
 ```sh
-go test ./...                     # store and HTTP behaviour
+go test ./...                  # base de données et comportement HTTP
 npm --prefix web run typecheck
 ```
 
-The Go binary embeds the built interface, so the deployed artefact is a single
-file with no assets to ship beside it. A binary built without `web/dist` still
-runs and still redirects — only the admin shell is missing, and it says so.
-
-## How it is put together
-
 ```
-cmd/collinesgo      entry point, configuration, graceful shutdown
-internal/config     environment, validated all at once at startup
-internal/store      SQLite: schema, links, slugs, clicks
-internal/auth       PocketID sign-in (OIDC + PKCE) and sessions
-internal/httpx      API, redirect path, server-rendered visitor pages
-web/                React interface, embedded into the binary
-design/             the prototype the interface was designed against
+cmd/collinesgo      point d'entrée, configuration, arrêt propre
+internal/config     variables d'environnement, validées d'un bloc au démarrage
+internal/store      SQLite : schéma, liens, slugs, ouvertures
+internal/auth       connexion PocketID (OIDC + PKCE) et sessions
+internal/httpx      API, chemin de redirection, pages visiteur
+web/                interface React, embarquée dans le binaire
+design/             le prototype ayant servi à valider l'interface
 ```
 
-`internal/auth` splits `Sessions` from `OIDC` on purpose: reading a session
-touches nothing but the database, so the whole request path is testable
-without a live identity provider.
+L'image est construite par GitHub Actions à chaque poussée sur `main` et
+publiée sur `ghcr.io/collinesfilms/shortify` en amd64 et arm64.
 
-## Decisions
+---
 
-**Auth** — PocketID (OIDC) only. No sign-up, no local login. Authorisation is
-delegated entirely to PocketID: if the login succeeds for this client, you're
-in. Links are owned by the PocketID subject so a second person can be added
-later without a migration.
+## Dépannage
 
-**Slugs** — 5 characters (configurable, 4–12) from a lowercase alphabet with
-`0 o 1 l i` removed, so a code read off a projector doesn't get mistyped.
-Lookup is case-insensitive. Custom slugs are checked for availability as you
-type. Deletes are soft and a slug is never handed out twice.
+**« configuration: ... is required » au démarrage.** Une variable manque dans le
+`.env`. Le message liste tout ce qui manque d'un coup.
 
-**Routing** — `go.collines.co/<slug>` with no prefix. The admin UI lives at
-`/`, its assets under `/_/`, and the reserved slug list covers the root files
-(`favicon.ico`, `robots.txt`, `manifest.webmanifest`, `sw.js`, `.well-known`).
+**La connexion boucle ou renvoie une erreur.** Vérifiez que l'URL de redirection
+déclarée dans PocketID est exactement `https://go.collines.co/auth/callback`, et
+que `CG_BASE_URL` ne comporte pas de barre oblique finale.
 
-**Redirects** — always 302 with `Cache-Control: no-store`. A 301 would be
-cached permanently by browsers and proxies, which breaks reviving and
-re-pointing links.
+**Un lien renvoie « Ce lien n'existe pas » alors qu'il existe.** Le proxy inverse
+ne transmet probablement pas l'en-tête `Host` : c'est lui qui détermine le
+domaine court sur lequel chercher le slug.
 
-**Service worker** — caches the admin shell only, and passes every other
-navigation straight to the network. A root-scoped SW that ever served a cached
-response for `/<slug>` would break every link already handed out, silently and
-for exactly the people who use the interface. It also has an `unregister`
-message so a bad worker can be evicted remotely.
+**L'interface s'affiche mais reste vide.** Le binaire a été construit sans
+`web/dist`. La page le dit explicitement — les redirections, elles, fonctionnent
+déjà.
 
-**Options** — custom slug, password, expiry. Expiry leads with relative
-presets (1 hour / end of today / 7 days / 30 days) because a class link is
-almost always "today"; a date picker sits behind one more tap. Expired links
-are kept and can be revived on the same slug.
-
-**Passwords** — bcrypt, and the gate is a page at the slug's own path rather
-than a separate URL. Attempts are rate-limited per address and slug so a
-protected link is not a free guessing oracle.
-
-**Stats** — total opens, uniques via a daily-rotating salted hash, last
-opened. No IP storage, no cookies on the redirect path. The salt is discarded
-when the day turns, so a visitor cannot be recomputed or followed across days.
-A list row shows the open count bottom-right with an icon; the 7-day sparkline
-lives in the link's detail sheet.
-
-**Fonts** — Be Vietnam Pro and DM Mono are self-hosted. The visitor pages are
-what students load, and they should not have to contact a font CDN to find out
-a link expired.
-
-**Clipboard** — auto-paste is attempted on load and works where the browser
-grants clipboard-read without a gesture; everywhere else the paste button is
-one tap and the failure is invisible. Auto-copy on create hands the clipboard
-a promise rather than a string, so it survives Safari's gesture rules.
-
-**Dashboard** — the link list and a link's detail are two separate sheets.
-Opening a detail retracts the list and raises the detail; going back reverses
-it. That also lets the result screen open a link's detail sheet directly,
-without passing through the list.
-
-**Account** — the avatar opens by width only, keeping its height, into a
-single `Déconnexion` action. Clicking anywhere else dismisses it.
-
-**The created link** is presented as a tear-off ticket: the short URL above a
-perforation — two notches cut into the card's edges and a dashed rule between
-them — and the clipboard confirmation on the stub below. The slug settles in
-character by character as it arrives, then stays still.
-
-**QR codes** are generated in-tree (byte mode, EC level M, versions 1–10),
-verified module for module against python-qrcode and decoded across a 258-case
-corpus, so the page pulls in no third-party script to draw them.
-
-## Not in v1
-
-Bulk create, tags and collections, Web Share Target, fullscreen present mode
-beyond the QR view, API tokens, custom OG previews.
+**Repartir de zéro.** Arrêtez le conteneur et supprimez `data/`. Tout est là.

@@ -1,5 +1,8 @@
+# syntax=docker/dockerfile:1
+
 # --- interface -------------------------------------------------------------
-FROM node:22-alpine AS web
+# Built on the machine doing the building, never under emulation.
+FROM --platform=$BUILDPLATFORM node:22-alpine AS web
 WORKDIR /app/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
@@ -8,8 +11,8 @@ RUN npm run build
 
 # --- binaire ---------------------------------------------------------------
 # Pas de cgo : le pilote SQLite est en Go pur, donc la compilation croisée vers
-# un NAS en arm64 ne demande aucune chaîne d'outils C.
-FROM golang:1.24-alpine AS build
+# l'arm64 d'un NAS ne demande aucune chaîne d'outils C et reste native.
+FROM --platform=$BUILDPLATFORM golang:1.24-alpine AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
@@ -17,9 +20,8 @@ COPY cmd/ ./cmd/
 COPY internal/ ./internal/
 COPY web/embed.go ./web/
 COPY --from=web /app/web/dist ./web/dist
-ARG TARGETOS=linux
 ARG TARGETARCH
-RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} \
     go build -trimpath -ldflags="-s -w" -o /out/collinesgo ./cmd/collinesgo
 
 # --- image finale ----------------------------------------------------------
