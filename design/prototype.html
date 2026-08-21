@@ -592,27 +592,33 @@ input:focus{outline:none;}
 .detail-head .t{min-width:0;}
 .detail-head .t .s{display:block;font-family:var(--mono);font-size:14px;font-weight:500;}
 .detail-head .t .d{display:block;font-size:11.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.detail-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:14px 16px 22px;display:flex;flex-direction:column;gap:14px;}
+.detail-body{flex:0 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:14px 16px 22px;display:flex;flex-direction:column;gap:14px;}
 .stats-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
 .stat-tile{background:var(--raised);border:1px solid var(--line);border-radius:var(--r-m);padding:11px 12px;overflow:hidden;}
 .stat-tile .k{font-size:10.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);}
 .stat-tile .v{font-family:var(--mono);font-size:19px;margin-top:3px;letter-spacing:-.02em;font-variant-numeric:tabular-nums;}
 .stat-tile .v.sm{font-size:13.5px;padding-top:4px;}
 .stat-tile .chart{display:block;margin-top:6px;color:var(--clay);}
+.stat-tile .sub{display:block;font-size:10.5px;color:var(--ink-3);margin-top:6px;line-height:1.3;}
 .sec{background:var(--raised);border:1px solid var(--line);border-radius:var(--r-m);overflow:hidden;}
-.sec-row{display:flex;align-items:center;gap:12px;padding:12px 13px;}
+.sec-row{
+  display:grid;grid-template-columns:112px minmax(0,1fr) auto;
+  align-items:center;gap:12px;padding:12px 13px;
+}
+.sec-row.wide{grid-template-columns:minmax(0,1fr) auto;}
 .sec-row + .sec-row{border-top:1px solid var(--line);}
-.sec-row .k{font-size:12.5px;color:var(--ink-2);flex:none;width:104px;}
-.sec-row .v{flex:1;min-width:0;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sec-row .k{font-size:12.5px;color:var(--ink-2);}
+.sec-row .v{min-width:0;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sec-row.wide .v{white-space:normal;font-size:12px;color:var(--ink-3);line-height:1.4;}
 .sec-row .v.mono{font-family:var(--mono);font-size:12px;}
 .mini{
-  flex:none;height:28px;padding:0 11px;border-radius:7px;
+  height:28px;min-width:82px;padding:0 11px;border-radius:7px;
   font-size:12px;font-weight:500;background:var(--sunken);color:var(--ink-2);
   transition:background var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
 }
 .mini:hover{background:var(--line);color:var(--ink);}
-.mini.accent{background:var(--moss-tint);color:var(--moss);}
-.mini.accent:hover{background:var(--moss);color:var(--on-accent);}
+.mini.accent{background:var(--moss-tint);color:var(--moss);box-shadow:inset 0 0 0 1px rgba(var(--moss-glow),.3);}
+.mini.accent:hover{background:var(--moss);color:var(--on-accent);box-shadow:none;}
 .mini.warn{background:transparent;color:var(--danger);}
 .mini.warn:hover{background:rgba(166,80,63,.12);}
 .sec-title{font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);margin:2px 0 -6px 2px;}
@@ -697,6 +703,8 @@ input:focus{outline:none;}
 .proto button.sel{background:var(--ink);color:var(--ground);}
 .proto .sep{width:1px;height:18px;background:var(--line);flex:none;margin:0 3px;}
 .proto .theme{width:29px;padding:0;display:grid;place-items:center;}
+.proto{transition:opacity var(--t-mid) var(--ease), transform var(--t-mid) var(--ease);}
+.proto.dim{opacity:0;pointer-events:none;transform:translateX(-50%) translateY(12px);}
 
 .qr-full{
   position:fixed;inset:0;z-index:70;background:#FFFFFF;
@@ -713,9 +721,16 @@ input:focus{outline:none;}
 @media (max-width:520px){
   #app{padding:16px;padding-bottom:88px;}
   .stage{border-radius:var(--r-l);}
-  .sheet{height:86dvh;}
+  .sheet:not(.auto){height:86dvh;}
   .filters button{padding:0 9px;}
   .search{gap:6px;}
+  .sec-row{grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;}
+  .sec-row .k{grid-column:1;grid-row:1;font-size:11.5px;color:var(--ink-3);}
+  .sec-row .v{grid-column:1;grid-row:2;}
+  .sec-row .mini{grid-column:2;grid-row:1 / span 2;}
+  .sec-row.wide{grid-template-columns:minmax(0,1fr) auto;}
+  .sec-row.wide .v{grid-column:1;grid-row:1;}
+  .sec-row.wide .mini{grid-row:1;}
 }
 @media (max-height:660px){ .proto{bottom:10px;} }
 </style>
@@ -1306,13 +1321,13 @@ $('#themeBtn').addEventListener('click', () => {
    DONNÉES DE DÉMONSTRATION
    ============================================================ */
 const LINKS = [
-  { slug:'tp-3',   dest:'https://collines.co/tp/securite-labo',                     clicks:212, uniq:168, created:'12 août',  expires:'dans 2 jours',  expired:false, pass:true,  series:[4,12,38,64,52,30,12] },
-  { slug:'x7kq2',  dest:'https://collines.co/cours/photo-ii/brief-semaine-3.pdf',   clicks:128, uniq:96,  created:'18 août',  expires:'dans 5 jours',  expired:false, pass:false, series:[2,8,22,41,28,17,10] },
-  { slug:'t8jrc',  dest:'https://collines.co/syllabus-2026.pdf',                    clicks:301, uniq:214, created:'2 sept.',  expires:'jamais',        expired:false, pass:false, series:[30,44,38,52,41,49,47] },
-  { slug:'m4rvp',  dest:'https://drive.google.com/file/d/diapos-critique-semaine-2',clicks:64,  uniq:51,  created:'9 août',   expires:'jamais',        expired:false, pass:false, series:[9,14,11,8,6,10,6] },
-  { slug:'k9wht',  dest:'https://youtube.com/watch?v=le-systeme-des-zones',         clicks:47,  uniq:39,  created:'5 août',   expires:'jamais',        expired:false, pass:false, series:[3,7,9,12,6,5,5] },
-  { slug:'q2fnd',  dest:'https://forms.collines.co/photo-ii-retour',                clicks:89,  uniq:77,  created:'28 juil.', expires:'il y a 3 jours',expired:true,  pass:false, series:[18,26,21,14,7,3,0] },
-  { slug:'b5xmq',  dest:'https://collines.co/cours/photo-ii/inscription-labo',      clicks:18,  uniq:16,  created:'19 juil.', expires:'il y a 12 jours',expired:true, pass:true,  series:[6,5,4,2,1,0,0] }
+  { slug:'tp-3',   dest:'https://collines.co/tp/securite-labo',                     clicks:212, uniq:168, created:'12 août', age:'il y a 9 jours',  expires:'dans 2 jours',  expired:false, pass:true,  series:[4,12,38,64,52,30,12] },
+  { slug:'x7kq2',  dest:'https://collines.co/cours/photo-ii/brief-semaine-3.pdf',   clicks:128, uniq:96,  created:'18 août', age:'il y a 3 jours',  expires:'dans 5 jours',  expired:false, pass:false, series:[2,8,22,41,28,17,10] },
+  { slug:'t8jrc',  dest:'https://collines.co/syllabus-2026.pdf',                    clicks:301, uniq:214, created:'2 sept.', age:'hier',  expires:'jamais',        expired:false, pass:false, series:[30,44,38,52,41,49,47] },
+  { slug:'m4rvp',  dest:'https://drive.google.com/file/d/diapos-critique-semaine-2',clicks:64,  uniq:51,  created:'9 août', age:'il y a 12 jours',   expires:'jamais',        expired:false, pass:false, series:[9,14,11,8,6,10,6] },
+  { slug:'k9wht',  dest:'https://youtube.com/watch?v=le-systeme-des-zones',         clicks:47,  uniq:39,  created:'5 août', age:'il y a 16 jours',   expires:'jamais',        expired:false, pass:false, series:[3,7,9,12,6,5,5] },
+  { slug:'q2fnd',  dest:'https://forms.collines.co/photo-ii-retour',                clicks:89,  uniq:77,  created:'28 juil.', age:'il y a 24 jours', expires:'il y a 3 jours',expired:true,  pass:false, series:[18,26,21,14,7,3,0] },
+  { slug:'b5xmq',  dest:'https://collines.co/cours/photo-ii/inscription-labo',      clicks:18,  uniq:16,  created:'19 juil.', age:'il y a 33 jours', expires:'il y a 12 jours',expired:true, pass:true,  series:[6,5,4,2,1,0,0] }
 ];
 const takenSlugs = () => new Set(LINKS.map(l=>l.slug).concat(RESERVED));
 
@@ -1660,7 +1675,7 @@ async function shorten(){
   const slug = S.slug || randCode();
   currentSlug = slug;
   LINKS.unshift({
-    slug, dest:S.url, pass:!!S.pass, clicks:0, uniq:0, created:'à l’instant',
+    slug, dest:S.url, pass:!!S.pass, clicks:0, uniq:0, created:'à l’instant', age:'',
     expires:S.exp ? S.exp.label : 'jamais', expired:false, series:[0,0,0,0,0,0,0]
   });
   S.phase = 'result';
@@ -1816,10 +1831,16 @@ function buildDetail(slug){
     <div class="stats-strip">
       <div class="stat-tile">
         <div class="k">Ouvertures</div><div class="v">${l.clicks}</div>
-        ${l.clicks ? sparkArea(l.series, 100, 20) : ''}
+        ${l.clicks ? sparkArea(l.series, 100, 20) : '<span class="sub">rien encore</span>'}
       </div>
-      <div class="stat-tile"><div class="k">Personnes</div><div class="v">${l.uniq}</div></div>
-      <div class="stat-tile"><div class="k">Créé</div><div class="v sm">${l.created}</div></div>
+      <div class="stat-tile">
+        <div class="k">Personnes</div><div class="v">${l.uniq}</div>
+        <span class="sub">${l.clicks ? Math.round(l.uniq/l.clicks*100)+' % du total' : 'rien encore'}</span>
+      </div>
+      <div class="stat-tile">
+        <div class="k">Créé</div><div class="v sm">${l.created}</div>
+        ${l.age ? '<span class="sub">'+l.age+'</span>' : ''}
+      </div>
     </div>
     <div class="sec-title">Lien</div>
     <div class="sec">
@@ -1835,7 +1856,7 @@ function buildDetail(slug){
     </div>
     <div class="sec-title">Suppression</div>
     <div class="sec">
-      <div class="sec-row"><span class="k">Supprimer</span><span class="v" style="color:var(--ink-3);font-size:11.5px">Le slug ne sera jamais réattribué.</span>
+      <div class="sec-row wide"><span class="v">Le lien cesse de fonctionner et son slug ne sera jamais réattribué.</span>
         <button class="mini warn" data-d="del">Supprimer</button></div>
     </div>`;
   $('#detailBody').querySelectorAll('[data-d]').forEach(b => b.addEventListener('click', () => {
@@ -1849,8 +1870,12 @@ function buildDetail(slug){
   return true;
 }
 
+const protoBar = document.querySelector('.proto');
+const dimProto = on => protoBar.classList.toggle('dim', on);
+
 function openDash(){
   renderRows();
+  dimProto(true);
   scrim.classList.add('on');
   detailSheet.classList.remove('on');
   sheet.classList.add('on');
@@ -1861,6 +1886,7 @@ function openDetail(slug, from){
   detailFrom = from;
   $('#detailBackIcon').setAttribute('href', from==='list' ? '#i-back' : '#i-x');
   $('#detailBack').setAttribute('aria-label', from==='list' ? 'Retour aux liens' : 'Fermer');
+  dimProto(true);
   scrim.classList.add('on');
   if(sheet.classList.contains('on')){
     sheet.classList.remove('on');
@@ -1876,12 +1902,14 @@ function backFromDetail(){
     setTimeout(() => sheet.classList.add('on'), 150);
   }else{
     scrim.classList.remove('on');
+    dimProto(false);
   }
 }
 function closeSheets(){
   sheet.classList.remove('on');
   detailSheet.classList.remove('on');
   scrim.classList.remove('on');
+  dimProto(false);
 }
 $('#dashBtn').addEventListener('click', openDash);
 $('#sheetClose').addEventListener('click', closeSheets);
