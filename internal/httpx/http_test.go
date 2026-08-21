@@ -27,7 +27,9 @@ type harness struct {
 	cookie  *http.Cookie
 }
 
-func setup(t *testing.T) *harness {
+func setup(t *testing.T) *harness { return setupLang(t, "en") }
+
+func setupLang(t *testing.T, lang string) *harness {
 	t.Helper()
 	st, err := store.Open(filepath.Join(t.TempDir(), "test.db"))
 	if err != nil {
@@ -46,6 +48,7 @@ func setup(t *testing.T) *harness {
 	cfg := &config.Config{
 		BaseURL: "https://go.collines.co",
 		Domains: []string{"go.collines.co", "clns.li"},
+		Lang:    lang,
 	}
 	// No identity provider is needed here: sessions are seeded directly, which
 	// is exactly why they live apart from the OIDC flow.
@@ -369,5 +372,100 @@ func TestFindByDestOffersTheExistingLink(t *testing.T) {
 		"https://go.collines.co/api/links/find?dest=https%3A%2F%2Fexample.com%2Fother", "", true)
 	if !strings.Contains(w.Body.String(), `"link":null`) {
 		t.Fatalf("unknown destination should report nothing: %s", w.Body.String())
+	}
+}
+
+// ---------------------------------------------------------------- language
+
+func TestVisitorPagesSpeakTheConfiguredLanguage(t *testing.T) {
+	h := setupLang(t, "fr")
+	w := h.do(http.MethodGet, "https://go.collines.co/nothing-here", "", false)
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("unknown slug = %d, want 404", w.Code)
+	}
+	body := w.Body.String()
+	// html/template escapes the apostrophes, so the assertions avoid them.
+	for _, want := range []string{`<html lang="fr">`, "Lien introuvable", "une lettre ou un chiffre"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("the French not-found page is missing %q:\n%s", want, body)
+		}
+	}
+}
+
+func TestApiRefusalsAreTranslated(t *testing.T) {
+	h := setupLang(t, "fr")
+	w := h.do(http.MethodPost, "https://go.collines.co/api/links", `{"dest":"not a url"}`, true)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("bad destination = %d, want 400", w.Code)
+	}
+	if !strings.Contains(w.Body.String(), "destination invalide") {
+		t.Errorf("refusal not translated: %s", w.Body.String())
+	}
+
+	// English is the default and must stay untouched.
+	e := setup(t)
+	w = e.do(http.MethodPost, "https://go.collines.co/api/links", `{"dest":"not a url"}`, true)
+	if !strings.Contains(w.Body.String(), "invalid destination") {
+		t.Errorf("English refusal changed: %s", w.Body.String())
+	}
+}
+
+func TestPasswordGateIsTranslated(t *testing.T) {
+	h := setupLang(t, "fr")
+	link := h.createLink(t, `{"dest":"https://example.com","slug":"secret","password":"hunter2"}`)
+	_ = link
+	w := h.do(http.MethodGet, "https://go.collines.co/secret", "", false)
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("protected link = %d, want 401", w.Code)
+	}
+	if !strings.Contains(w.Body.String(), "Ce lien est protégé") {
+		t.Errorf("the gate is not in French:\n%s", w.Body.String())
+	}
+}
+
+// ---------------------------------------------------------------- preferences
+
+func TestThemeIsStoredAgainstTheAccount(t *testing.T) {
+	h := setup(t)
+
+	// Nobody has chosen anything yet, so the system decides.
+	var me struct {
+		Prefs userPrefs `json:"prefs"`
+		Lang  string    `json:"lang"`
+	}
+	w := h.do(http.MethodGet, "https://go.collines.co/api/me", "", true)
+	if err := json.Unmarshal(w.Body.Bytes(), &me); err != nil {
+		t.Fatalf("decode /api/me: %v", err)
+	}
+	if me.Prefs.Theme != "auto" {
+		t.Errorf("default theme = %q, want auto", me.Prefs.Theme)
+	}
+	if me.Lang != "en" {
+		t.Errorf("lang = %q, want en", me.Lang)
+	}
+
+	if w := h.do(http.MethodPut, "https://go.collines.co/api/prefs", `{"theme":"dark"}`, true); w.Code != http.StatusOK {
+		t.Fatalf("save theme: %d %s", w.Code, w.Body.String())
+	}
+
+	// A different browser, same account: the choice is already made.
+	w = h.do(http.MethodGet, "https://go.collines.co/api/me", "", true)
+	if err := json.Unmarshal(w.Body.Bytes(), &me); err != nil {
+		t.Fatalf("decode /api/me: %v", err)
+	}
+	if me.Prefs.Theme != "dark" {
+		t.Errorf("theme after saving = %q, want dark", me.Prefs.Theme)
+	}
+}
+
+func TestUnknownThemeIsRefused(t *testing.T) {
+	h := setup(t)
+	w := h.do(http.MethodPut, "https://go.collines.co/api/prefs", `{"theme":"neon"}`, true)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("theme=neon = %d, want 400", w.Code)
+	}
+	w = h.do(http.MethodPut, "https://go.collines.co/api/prefs", `{"theme":"dark"}`, false)
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("saving a theme without a session = %d, want 401", w.Code)
 	}
 }

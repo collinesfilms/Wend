@@ -12,6 +12,9 @@ export default defineConfig({
     assetsDir: 'assets',
   },
   server: {
+    // The translation catalogue is shared with the Go server, so it sits above
+    // this directory and the dev server has to be allowed to read it.
+    fs: { allow: ['..'] },
     proxy: {
       '/api': 'http://localhost:8080',
       '/auth': 'http://localhost:8080',

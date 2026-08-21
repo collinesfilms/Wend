@@ -7,6 +7,9 @@ WORKDIR /app/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
 COPY web/ ./
+# The interface reads the same translation catalogue the Go server does, from
+# above this directory. See web/src/i18n.ts.
+COPY locales/ ../locales/
 RUN npm run build
 
 # --- binary ---------------------------------------------------------------
@@ -18,6 +21,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY cmd/ ./cmd/
 COPY internal/ ./internal/
+COPY locales/ ./locales/
 COPY web/embed.go ./web/
 COPY --from=web /app/web/dist ./web/dist
 ARG TARGETARCH

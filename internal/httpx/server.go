@@ -3,6 +3,8 @@
 package httpx
 
 import (
+	"bytes"
+	"encoding/json"
 	"io/fs"
 	"net/http"
 	"strings"
@@ -10,6 +12,7 @@ import (
 	"github.com/collinesfilms/wend/internal/auth"
 	"github.com/collinesfilms/wend/internal/config"
 	"github.com/collinesfilms/wend/internal/store"
+	"github.com/collinesfilms/wend/locales"
 	"github.com/collinesfilms/wend/web"
 )
 
@@ -47,7 +50,7 @@ func New(cfg *config.Config, st *store.Store, sessions *auth.Sessions, oidc *aut
 		oidc:      oidc,
 		limiter:   newAttemptLimiter(),
 		assets:    assets,
-		index:     index,
+		index:     localiseShell(index, cfg.Lang),
 		adminHost: hostOnly(strings.TrimPrefix(strings.TrimPrefix(cfg.BaseURL, "https://"), "http://")),
 	}, nil
 }
@@ -87,6 +90,7 @@ func (s *Server) Handler() http.Handler {
 	api.HandleFunc("GET /api/me", s.handleMe)
 	api.HandleFunc("GET /api/settings", s.handleGetSettings)
 	api.HandleFunc("PUT /api/settings", s.handlePutSettings)
+	api.HandleFunc("PUT /api/prefs", s.handlePutPrefs)
 	api.HandleFunc("GET /api/links", s.handleListLinks)
 	api.HandleFunc("POST /api/links", s.handleCreateLink)
 	api.HandleFunc("GET /api/links/{id}", s.handleGetLink)
@@ -117,6 +121,29 @@ func (s *Server) handleRoot(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 	_, _ = w.Write(s.index)
+}
+
+// localiseShell stamps the deployment's language into the built app shell, so
+// the interface knows which words to use before it has spoken to the API and
+// screen readers get the right language on the very first paint.
+func localiseShell(index []byte, lang string) []byte {
+	if lang == "" || lang == locales.Default {
+		return index
+	}
+	out := bytes.Replace(index,
+		[]byte(`<html lang="`+locales.Default+`">`), []byte(`<html lang="`+lang+`">`), 1)
+	return bytes.Replace(out,
+		[]byte(`<head>`),
+		[]byte(`<head><script>window.__WEND_LANG__=`+jsonString(lang)+`</script>`), 1)
+}
+
+// jsonString quotes and escapes a value for inlining into a <script> tag.
+func jsonString(v string) string {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return `"` + locales.Default + `"`
+	}
+	return string(b)
 }
 
 func (s *Server) assetHandler() http.Handler {

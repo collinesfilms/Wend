@@ -1,7 +1,10 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
+import { makeItFeelLikeAnApp } from './touch'
 import './styles.css'
+
+makeItFeelLikeAnApp()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

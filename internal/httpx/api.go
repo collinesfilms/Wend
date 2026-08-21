@@ -15,6 +15,7 @@ import (
 
 	"github.com/collinesfilms/wend/internal/auth"
 	"github.com/collinesfilms/wend/internal/store"
+	"github.com/collinesfilms/wend/locales"
 )
 
 // Ambiguous characters are left out so a code read off a projector and typed
@@ -41,8 +42,11 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 	_ = json.NewEncoder(w).Encode(v)
 }
 
-func writeErr(w http.ResponseWriter, status int, msg string) {
-	writeJSON(w, status, map[string]string{"error": msg})
+// writeErr sends a refusal in the deployment's language. The call sites keep
+// their plain English message: locales.Error looks the translation up by it,
+// and passes anything the catalogue does not know through unchanged.
+func (s *Server) writeErr(w http.ResponseWriter, status int, msg string) {
+	writeJSON(w, status, map[string]string{"error": locales.Error(s.cfg.Lang, msg)})
 }
 
 func readJSON(r *http.Request, v any) error {
@@ -104,17 +108,17 @@ func (s *Server) handleGetSettings(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handlePutSettings(w http.ResponseWriter, r *http.Request) {
 	var in appSettings
 	if err := readJSON(r, &in); err != nil {
-		writeErr(w, http.StatusBadRequest, "could not read that request")
+		s.writeErr(w, http.StatusBadRequest, "could not read that request")
 		return
 	}
 	if in.SlugLength < 4 || in.SlugLength > 12 {
-		writeErr(w, http.StatusBadRequest, "code length must be between 4 and 12")
+		s.writeErr(w, http.StatusBadRequest, "code length must be between 4 and 12")
 		return
 	}
 	switch in.DefaultExpiry {
 	case "never", "1h", "today", "7d", "30d":
 	default:
-		writeErr(w, http.StatusBadRequest, "unknown default expiry")
+		s.writeErr(w, http.StatusBadRequest, "unknown default expiry")
 		return
 	}
 	ctx := r.Context()
@@ -132,19 +136,66 @@ func boolStr(b bool) string {
 	return "0"
 }
 
+// ------------------------------------------------------- personal preferences
+
+// Preferences belong to the person, not to the instance: the theme follows an
+// account from a phone to a desktop instead of living in one browser's storage.
+type userPrefs struct {
+	Theme string `json:"theme"` // "auto", "light" or "dark"
+}
+
+func (s *Server) prefs(r *http.Request) userPrefs {
+	u, ok := auth.UserFrom(r.Context())
+	p := userPrefs{Theme: "auto"}
+	if !ok {
+		return p
+	}
+	stored, err := s.st.UserPrefs(r.Context(), u.ID)
+	if err != nil {
+		return p
+	}
+	switch stored["theme"] {
+	case "light", "dark", "auto":
+		p.Theme = stored["theme"]
+	}
+	return p
+}
+
+func (s *Server) handlePutPrefs(w http.ResponseWriter, r *http.Request) {
+	var in userPrefs
+	if err := readJSON(r, &in); err != nil {
+		s.writeErr(w, http.StatusBadRequest, "could not read that request")
+		return
+	}
+	switch in.Theme {
+	case "auto", "light", "dark":
+	default:
+		s.writeErr(w, http.StatusBadRequest, "unknown theme")
+		return
+	}
+	u, _ := auth.UserFrom(r.Context())
+	if err := s.st.SetUserPref(r.Context(), u.ID, "theme", in.Theme); err != nil {
+		s.writeErr(w, http.StatusInternalServerError, "could not save your preferences")
+		return
+	}
+	writeJSON(w, http.StatusOK, s.prefs(r))
+}
+
 // ---------------------------------------------------------------- me
 
 func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 	u, _ := auth.UserFrom(r.Context())
 	domains, err := s.st.Domains(r.Context())
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "could not load the domains")
+		s.writeErr(w, http.StatusInternalServerError, "could not load the domains")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"user":     u,
 		"domains":  domains,
 		"settings": s.settings(r),
+		"prefs":    s.prefs(r),
+		"lang":     s.cfg.Lang,
 		"brand": map[string]string{
 			"name":    s.cfg.BrandName,
 			"tagline": s.cfg.Tagline,
@@ -159,23 +210,23 @@ func (s *Server) handleAddDomain(w http.ResponseWriter, r *http.Request) {
 		Host string `json:"host"`
 	}
 	if err := readJSON(r, &in); err != nil {
-		writeErr(w, http.StatusBadRequest, "could not read that request")
+		s.writeErr(w, http.StatusBadRequest, "could not read that request")
 		return
 	}
 	host := strings.ToLower(strings.TrimSpace(in.Host))
 	host = strings.TrimPrefix(strings.TrimPrefix(host, "https://"), "http://")
 	host = strings.Trim(host, "/")
 	if host == "" || !strings.Contains(host, ".") || strings.ContainsAny(host, " /:?#") {
-		writeErr(w, http.StatusBadRequest, "that domain is not valid")
+		s.writeErr(w, http.StatusBadRequest, "that domain is not valid")
 		return
 	}
 	d, err := s.st.AddDomain(r.Context(), host)
 	if err != nil {
 		if strings.Contains(err.Error(), "UNIQUE") {
-			writeErr(w, http.StatusConflict, "that domain is already registered")
+			s.writeErr(w, http.StatusConflict, "that domain is already registered")
 			return
 		}
-		writeErr(w, http.StatusInternalServerError, "could not add the domain")
+		s.writeErr(w, http.StatusInternalServerError, "could not add the domain")
 		return
 	}
 	writeJSON(w, http.StatusCreated, d)
@@ -184,11 +235,11 @@ func (s *Server) handleAddDomain(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleDefaultDomain(w http.ResponseWriter, r *http.Request) {
 	id, ok := pathID(r, "id")
 	if !ok {
-		writeErr(w, http.StatusBadRequest, "invalid identifier")
+		s.writeErr(w, http.StatusBadRequest, "invalid identifier")
 		return
 	}
 	if err := s.st.SetDefaultDomain(r.Context(), id); err != nil {
-		writeErr(w, http.StatusInternalServerError, "could not change the default domain")
+		s.writeErr(w, http.StatusInternalServerError, "could not change the default domain")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -197,11 +248,11 @@ func (s *Server) handleDefaultDomain(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 	id, ok := pathID(r, "id")
 	if !ok {
-		writeErr(w, http.StatusBadRequest, "invalid identifier")
+		s.writeErr(w, http.StatusBadRequest, "invalid identifier")
 		return
 	}
 	if err := s.st.DeleteDomain(r.Context(), id); err != nil {
-		writeErr(w, http.StatusConflict, err.Error())
+		s.writeErr(w, http.StatusConflict, err.Error())
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -213,7 +264,7 @@ func (s *Server) handleListLinks(w http.ResponseWriter, r *http.Request) {
 	u, _ := auth.UserFrom(r.Context())
 	links, err := s.st.List(r.Context(), u.ID)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "could not load the links")
+		s.writeErr(w, http.StatusInternalServerError, "could not load the links")
 		return
 	}
 	writeJSON(w, http.StatusOK, links)
@@ -224,7 +275,7 @@ func (s *Server) handleCheckSlug(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		d, err := s.st.DefaultDomain(r.Context())
 		if err != nil {
-			writeErr(w, http.StatusInternalServerError, "no domain configured")
+			s.writeErr(w, http.StatusInternalServerError, "no domain configured")
 			return
 		}
 		domainID = d.ID
@@ -237,7 +288,7 @@ func (s *Server) handleCheckSlug(w http.ResponseWriter, r *http.Request) {
 	case errors.Is(err, store.ErrSlugInvalid):
 		writeJSON(w, http.StatusOK, map[string]any{"available": false, "reason": "invalid"})
 	case err != nil:
-		writeErr(w, http.StatusInternalServerError, "could not check that slug")
+		s.writeErr(w, http.StatusInternalServerError, "could not check that slug")
 	default:
 		reason := ""
 		if !available {
@@ -258,7 +309,7 @@ func (s *Server) handleFindByDest(w http.ResponseWriter, r *http.Request) {
 	}
 	links, err := s.st.List(r.Context(), u.ID)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "could not look that up")
+		s.writeErr(w, http.StatusInternalServerError, "could not look that up")
 		return
 	}
 	for i := range links {
@@ -282,12 +333,12 @@ func (s *Server) handleCreateLink(w http.ResponseWriter, r *http.Request) {
 	u, _ := auth.UserFrom(r.Context())
 	var in createLinkRequest
 	if err := readJSON(r, &in); err != nil {
-		writeErr(w, http.StatusBadRequest, "could not read that request")
+		s.writeErr(w, http.StatusBadRequest, "could not read that request")
 		return
 	}
 	dest, ok := validDest(in.Dest)
 	if !ok {
-		writeErr(w, http.StatusBadRequest, "invalid destination: an http or https address is expected")
+		s.writeErr(w, http.StatusBadRequest, "invalid destination: an http or https address is expected")
 		return
 	}
 
@@ -295,7 +346,7 @@ func (s *Server) handleCreateLink(w http.ResponseWriter, r *http.Request) {
 	if domainID == 0 {
 		d, err := s.st.DefaultDomain(r.Context())
 		if err != nil {
-			writeErr(w, http.StatusInternalServerError, "no domain configured")
+			s.writeErr(w, http.StatusInternalServerError, "no domain configured")
 			return
 		}
 		domainID = d.ID
@@ -303,7 +354,7 @@ func (s *Server) handleCreateLink(w http.ResponseWriter, r *http.Request) {
 
 	expires, err := parseExpiry(in.ExpiresAt)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid expiry date")
+		s.writeErr(w, http.StatusBadRequest, "invalid expiry date")
 		return
 	}
 
@@ -311,7 +362,7 @@ func (s *Server) handleCreateLink(w http.ResponseWriter, r *http.Request) {
 	if in.Password != "" {
 		h, err := bcrypt.GenerateFromPassword([]byte(in.Password), bcrypt.DefaultCost)
 		if err != nil {
-			writeErr(w, http.StatusInternalServerError, "could not protect the link")
+			s.writeErr(w, http.StatusInternalServerError, "could not protect the link")
 			return
 		}
 		hash = string(h)
@@ -330,7 +381,7 @@ func (s *Server) handleCreateLink(w http.ResponseWriter, r *http.Request) {
 		for attempt := 0; attempt < 12; attempt++ {
 			slug, err := randomSlug(length + attempt/4)
 			if err != nil {
-				writeErr(w, http.StatusInternalServerError, "could not generate a code")
+				s.writeErr(w, http.StatusInternalServerError, "could not generate a code")
 				return
 			}
 			create.Slug = slug
@@ -339,26 +390,26 @@ func (s *Server) handleCreateLink(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			if err != nil {
-				writeErr(w, http.StatusInternalServerError, "could not create the link")
+				s.writeErr(w, http.StatusInternalServerError, "could not create the link")
 				return
 			}
 			writeJSON(w, http.StatusCreated, link)
 			return
 		}
-		writeErr(w, http.StatusInternalServerError, "could not find a free code")
+		s.writeErr(w, http.StatusInternalServerError, "could not find a free code")
 		return
 	}
 
 	link, err := s.st.Create(r.Context(), create)
 	switch {
 	case errors.Is(err, store.ErrSlugTaken):
-		writeErr(w, http.StatusConflict, "that slug is already in use")
+		s.writeErr(w, http.StatusConflict, "that slug is already in use")
 	case errors.Is(err, store.ErrSlugReserved):
-		writeErr(w, http.StatusConflict, "that slug is reserved")
+		s.writeErr(w, http.StatusConflict, "that slug is reserved")
 	case errors.Is(err, store.ErrSlugInvalid):
-		writeErr(w, http.StatusBadRequest, "invalid slug")
+		s.writeErr(w, http.StatusBadRequest, "invalid slug")
 	case err != nil:
-		writeErr(w, http.StatusInternalServerError, "could not create the link")
+		s.writeErr(w, http.StatusInternalServerError, "could not create the link")
 	default:
 		writeJSON(w, http.StatusCreated, link)
 	}
@@ -380,12 +431,12 @@ func (s *Server) handleGetLink(w http.ResponseWriter, r *http.Request) {
 	u, _ := auth.UserFrom(r.Context())
 	id, ok := pathID(r, "id")
 	if !ok {
-		writeErr(w, http.StatusBadRequest, "invalid identifier")
+		s.writeErr(w, http.StatusBadRequest, "invalid identifier")
 		return
 	}
 	link, err := s.st.Link(r.Context(), id)
 	if err != nil || link.OwnerID != u.ID {
-		writeErr(w, http.StatusNotFound, "link not found")
+		s.writeErr(w, http.StatusNotFound, "link not found")
 		return
 	}
 	writeJSON(w, http.StatusOK, link)
@@ -402,12 +453,12 @@ func (s *Server) handleUpdateLink(w http.ResponseWriter, r *http.Request) {
 	u, _ := auth.UserFrom(r.Context())
 	id, ok := pathID(r, "id")
 	if !ok {
-		writeErr(w, http.StatusBadRequest, "invalid identifier")
+		s.writeErr(w, http.StatusBadRequest, "invalid identifier")
 		return
 	}
 	var in updateLinkRequest
 	if err := readJSON(r, &in); err != nil {
-		writeErr(w, http.StatusBadRequest, "could not read that request")
+		s.writeErr(w, http.StatusBadRequest, "could not read that request")
 		return
 	}
 
@@ -415,7 +466,7 @@ func (s *Server) handleUpdateLink(w http.ResponseWriter, r *http.Request) {
 	if in.Dest != nil {
 		dest, ok := validDest(*in.Dest)
 		if !ok {
-			writeErr(w, http.StatusBadRequest, "invalid destination")
+			s.writeErr(w, http.StatusBadRequest, "invalid destination")
 			return
 		}
 		upd.Dest = &dest
@@ -425,7 +476,7 @@ func (s *Server) handleUpdateLink(w http.ResponseWriter, r *http.Request) {
 		if *in.Password != "" {
 			h, err := bcrypt.GenerateFromPassword([]byte(*in.Password), bcrypt.DefaultCost)
 			if err != nil {
-				writeErr(w, http.StatusInternalServerError, "could not protect the link")
+				s.writeErr(w, http.StatusInternalServerError, "could not protect the link")
 				return
 			}
 			hash = string(h)
@@ -439,7 +490,7 @@ func (s *Server) handleUpdateLink(w http.ResponseWriter, r *http.Request) {
 		} else {
 			t, err := parseExpiry(in.ExpiresAt)
 			if err != nil {
-				writeErr(w, http.StatusBadRequest, "invalid expiry date")
+				s.writeErr(w, http.StatusBadRequest, "invalid expiry date")
 				return
 			}
 			upd.ExpiresAt = &t
@@ -448,12 +499,12 @@ func (s *Server) handleUpdateLink(w http.ResponseWriter, r *http.Request) {
 	upd.Disabled = in.Disabled
 
 	if err := s.st.Update(r.Context(), id, u.ID, upd); err != nil {
-		writeErr(w, http.StatusNotFound, "link not found")
+		s.writeErr(w, http.StatusNotFound, "link not found")
 		return
 	}
 	link, err := s.st.Link(r.Context(), id)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "could not load the link")
+		s.writeErr(w, http.StatusInternalServerError, "could not load the link")
 		return
 	}
 	writeJSON(w, http.StatusOK, link)
@@ -463,11 +514,11 @@ func (s *Server) handleDeleteLink(w http.ResponseWriter, r *http.Request) {
 	u, _ := auth.UserFrom(r.Context())
 	id, ok := pathID(r, "id")
 	if !ok {
-		writeErr(w, http.StatusBadRequest, "invalid identifier")
+		s.writeErr(w, http.StatusBadRequest, "invalid identifier")
 		return
 	}
 	if err := s.st.Delete(r.Context(), id, u.ID); err != nil {
-		writeErr(w, http.StatusNotFound, "link not found")
+		s.writeErr(w, http.StatusNotFound, "link not found")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -477,12 +528,12 @@ func (s *Server) handleAddAlias(w http.ResponseWriter, r *http.Request) {
 	u, _ := auth.UserFrom(r.Context())
 	id, ok := pathID(r, "id")
 	if !ok {
-		writeErr(w, http.StatusBadRequest, "invalid identifier")
+		s.writeErr(w, http.StatusBadRequest, "invalid identifier")
 		return
 	}
 	link, err := s.st.Link(r.Context(), id)
 	if err != nil || link.OwnerID != u.ID {
-		writeErr(w, http.StatusNotFound, "link not found")
+		s.writeErr(w, http.StatusNotFound, "link not found")
 		return
 	}
 	var in struct {
@@ -490,7 +541,7 @@ func (s *Server) handleAddAlias(w http.ResponseWriter, r *http.Request) {
 		DomainID int64  `json:"domain_id"`
 	}
 	if err := readJSON(r, &in); err != nil {
-		writeErr(w, http.StatusBadRequest, "could not read that request")
+		s.writeErr(w, http.StatusBadRequest, "could not read that request")
 		return
 	}
 	domainID := in.DomainID
@@ -499,13 +550,13 @@ func (s *Server) handleAddAlias(w http.ResponseWriter, r *http.Request) {
 	}
 	switch err := s.st.AddAlias(r.Context(), id, domainID, in.Slug); {
 	case errors.Is(err, store.ErrSlugTaken):
-		writeErr(w, http.StatusConflict, "that slug is already in use")
+		s.writeErr(w, http.StatusConflict, "that slug is already in use")
 	case errors.Is(err, store.ErrSlugReserved):
-		writeErr(w, http.StatusConflict, "that slug is reserved")
+		s.writeErr(w, http.StatusConflict, "that slug is reserved")
 	case errors.Is(err, store.ErrSlugInvalid):
-		writeErr(w, http.StatusBadRequest, "invalid slug")
+		s.writeErr(w, http.StatusBadRequest, "invalid slug")
 	case err != nil:
-		writeErr(w, http.StatusInternalServerError, "could not add that")
+		s.writeErr(w, http.StatusInternalServerError, "could not add that")
 	default:
 		updated, _ := s.st.Link(r.Context(), id)
 		writeJSON(w, http.StatusCreated, updated)

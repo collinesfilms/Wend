@@ -2,16 +2,44 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#ECEEEA" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#141613" media="(prefers-color-scheme: dark)" />
+    <!-- Locked to one scale and fitted to the notch: this is meant to feel like
+         an application, not a page you can pinch and double-tap around. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content"
+    />
+    <meta name="theme-color" content="#ECEEEA" />
+    <meta name="color-scheme" content="light dark" />
     <meta name="robots" content="noindex, nofollow" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="format-detection" content="telephone=no" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <title>Wend</title>
+    <script>
+      // The theme the account chose is only known once /api/me answers, which
+      // is far too late: a dark interface would flash white first. The last
+      // choice this browser saw is cached locally purely to paint frame one.
+      ;(function () {
+        try {
+          var stored = localStorage.getItem('wend-theme')
+          var theme = stored === 'light' || stored === 'dark' || stored === 'auto' ? stored : 'auto'
+          if (theme !== 'auto') document.documentElement.setAttribute('data-theme', theme)
+          var dark =
+            theme === 'dark' ||
+            (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+          var meta = document.querySelector('meta[name="theme-color"]')
+          if (meta) meta.setAttribute('content', dark ? '#141613' : '#ECEEEA')
+        } catch (e) {
+          /* no storage: the stylesheet's own defaults are already correct */
+        }
+      })()
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

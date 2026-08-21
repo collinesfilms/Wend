@@ -130,6 +130,14 @@ export const Moon = (p: Props) => (
     <path d="M20.4 14.6A8.6 8.6 0 019.4 3.6a8.6 8.6 0 1011 11z" />
   </Svg>
 )
+// Half sun, half moon: the theme is whichever the device is asking for.
+export const Auto = (p: Props) => (
+  <Svg {...p}>
+    <circle cx="12" cy="12" r="4.2" />
+    <path d="M12 7.8a4.2 4.2 0 000 8.4z" fill="currentColor" stroke="none" />
+    <path d="M12 2.6v2.2M12 19.2v2.2M4.3 4.3l1.6 1.6M2.6 12h2.2M4.3 19.7l1.6-1.6" />
+  </Svg>
+)
 export const Key = (p: Props) => (
   <Svg {...p}>
     <circle cx="8" cy="12" r="4.2" />

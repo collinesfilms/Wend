@@ -72,3 +72,13 @@ CREATE TABLE IF NOT EXISTS settings (
   key   TEXT PRIMARY KEY,
   value TEXT NOT NULL
 );
+
+-- Preferences that belong to a person rather than to the instance, so a choice
+-- made on a phone is already made on the desktop. Keyed like the global
+-- settings table, one row per key so adding a preference needs no migration.
+CREATE TABLE IF NOT EXISTS user_prefs (
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  key     TEXT NOT NULL,
+  value   TEXT NOT NULL,
+  PRIMARY KEY (user_id, key)
+);

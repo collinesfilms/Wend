@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/collinesfilms/wend/internal/store"
+	"github.com/collinesfilms/wend/locales"
 )
 
 // Password attempts are rate limited per client and slug so a protected link
@@ -104,6 +106,16 @@ func (s *Server) shortURL(r *http.Request, slug string) string {
 	return "https://" + hostOnly(r.Host) + "/" + slug
 }
 
+// longDate spells a date out the way the deployment's language does. Go's
+// time package only knows English month names, so they come from the catalogue.
+func (s *Server) longDate(t time.Time) string {
+	month := locales.Month(s.cfg.Lang, int(t.Month()))
+	if month == "" {
+		return t.Format("2 January 2006")
+	}
+	return fmt.Sprintf("%d %s %d", t.Day(), month, t.Year())
+}
+
 func hostOnly(host string) string {
 	if i := strings.IndexByte(host, ':'); i >= 0 {
 		return strings.ToLower(host[:i])
@@ -119,35 +131,35 @@ func (s *Server) serveSlug(w http.ResponseWriter, r *http.Request) {
 
 	target, err := s.st.Resolve(r.Context(), r.Host, slug)
 	if errors.Is(err, store.ErrNotFound) {
-		notFoundPage(w, short)
+		s.notFoundPage(w, short)
 		return
 	}
 	if err != nil {
-		http.Error(w, "erreur interne", http.StatusInternalServerError)
+		http.Error(w, locales.Error(s.cfg.Lang, "internal error"), http.StatusInternalServerError)
 		return
 	}
 	if target.Disabled {
-		expiredPage(w, short, "")
+		s.expiredPage(w, short, "")
 		return
 	}
 	if target.ExpiresAt != nil && target.ExpiresAt.Before(time.Now().UTC()) {
-		expiredPage(w, short, target.ExpiresAt.Local().Format("2 January 2006"))
+		s.expiredPage(w, short, s.longDate(target.ExpiresAt.Local()))
 		return
 	}
 
 	if target.PasswordHash != "" {
 		if r.Method != http.MethodPost {
-			gatePage(w, short, false)
+			s.gatePage(w, short, false)
 			return
 		}
 		key := s.clientIP(r) + "|" + slug
 		if !s.limiter.allow(key) {
-			tooManyPage(w, short)
+			s.tooManyPage(w, short)
 			return
 		}
 		if err := bcrypt.CompareHashAndPassword(
 			[]byte(target.PasswordHash), []byte(r.FormValue("password"))); err != nil {
-			gatePage(w, short, true)
+			s.gatePage(w, short, true)
 			return
 		}
 	} else if r.Method == http.MethodPost {
