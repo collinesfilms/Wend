@@ -23,7 +23,7 @@ and lookups are case-insensitive, so `/X7KQ2` finds `/x7kq2`.
 **A QR code for every link**, full-screen when you need to put one on a wall or
 a projector. Generated in-tree; no third-party script draws it.
 
-**A list of everything you've made**, with opens, expiry and quick copy.
+**A list of every link you've made**, with opens, expiry and quick copy.
 
 |  |  |
 |---|---|
@@ -129,10 +129,6 @@ go.example.com, sho.rt {
 }
 ```
 
-On Synology, *Control Panel → Login Portal → Reverse Proxy*: source
-`https://go.example.com:443`, destination `http://localhost:9018`. It forwards
-`Host` and `X-Forwarded-For` by default.
-
 ### 5. Start
 
 The container does not run as root, so the data directory has to belong to it:
@@ -143,10 +139,6 @@ docker compose up -d
 ```
 
 Then open your base URL and sign in.
-
-> The published image is at `ghcr.io/collinesfilms/wend`. If the package is
-> private, either make it public in the GitHub package settings or
-> `docker login ghcr.io` on the host with a token that has `read:packages`.
 
 ### Backups
 
