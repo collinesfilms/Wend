@@ -1,8 +1,11 @@
-# Shortify
+# Collines Go
 
 A self-hosted URL shortener for `go.collines.co`, built around one gesture:
 open the tab, the link is already in the box, one tap puts the short URL on
-your clipboard.
+your clipboard. `Shortify` is only the repository name — the product is
+Collines Go.
+
+The interface is in French throughout, admin and visitor pages alike.
 
 Primary use is handing links to students in class, so the visitor-facing
 pages matter as much as the admin UI.
@@ -10,7 +13,8 @@ pages matter as much as the admin UI.
 ## Status
 
 Design phase. `design/prototype.html` is a clickable prototype of the whole
-UI — real motion, real QR codes, fake data. Stills in `design/review/`.
+UI — real motion, real QR codes, fake data. Stills in `design/review/`,
+per-state captures in `design/shots/`.
 
 ## Decided
 
@@ -43,7 +47,17 @@ almost always "today"; a date picker sits behind one more tap. Expired links
 are kept and can be revived on the same slug.
 
 **Stats** — total opens, uniques via a daily-rotating salted hash, last
-opened. No IP storage, no cookies on the redirect path.
+opened. No IP storage, no cookies on the redirect path. A list row shows the
+open count bottom-right with an icon; the 7-day sparkline lives in the link's
+detail sheet.
+
+**Dashboard** — the link list and a link's detail are two separate sheets.
+Opening a detail retracts the list and raises the detail; going back reverses
+it. That also lets the result screen open a link's detail sheet directly,
+without passing through the list.
+
+**Account** — the avatar opens by width only, keeping its height, into a
+single `Déconnexion` action. Clicking anywhere else dismisses it.
 
 **Clipboard** — auto-paste is attempted on load and works where the browser
 grants clipboard-read without a gesture; everywhere else the paste button is
