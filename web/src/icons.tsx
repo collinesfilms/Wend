@@ -138,6 +138,13 @@ export const Auto = (p: Props) => (
     <path d="M12 2.6v2.2M12 19.2v2.2M4.3 4.3l1.6 1.6M2.6 12h2.2M4.3 19.7l1.6-1.6" />
   </Svg>
 )
+export const Download = (p: Props) => (
+  <Svg {...p}>
+    <path d="M12 3.4v11.4" />
+    <path d="M7.6 10.6L12 15l4.4-4.4" />
+    <path d="M4.4 17.2v1.6a2 2 0 002 2h11.2a2 2 0 002-2v-1.6" />
+  </Svg>
+)
 export const Key = (p: Props) => (
   <Svg {...p}>
     <circle cx="8" cy="12" r="4.2" />

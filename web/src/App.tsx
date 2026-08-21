@@ -6,6 +6,7 @@ import { applyTheme, cachedTheme, isTheme, nextTheme, watchSystem, type Theme } 
 import { t } from './i18n'
 import * as I from './icons'
 import { draw as drawQr } from './qr'
+import { saveQr } from './qrfile'
 
 type Sheet = 'none' | 'links' | 'detail' | 'settings'
 
@@ -146,6 +147,13 @@ export default function App() {
     return () => document.removeEventListener('click', dismiss)
   }, [])
 
+  const downloadQr = async () => {
+    if (!qrFull) return
+    const outcome = await saveQr(qrFull.short_url, qrFull.slug)
+    if (outcome === 'downloaded') showToast(t('toast.qr_saved'))
+    if (outcome === 'failed') showToast(t('toast.qr_failed'), true)
+  }
+
   const signOut = async () => {
     try {
       await api.logout()
@@ -282,6 +290,17 @@ export default function App() {
           {qrFull ? `${qrFull.host}/` : ''}
           <b>{qrFull?.slug}</b>
         </div>
+        <button
+          className="qr-full-save"
+          aria-label={t('qr.download.aria')}
+          onClick={(e) => {
+            e.stopPropagation()
+            void downloadQr()
+          }}
+        >
+          <I.Download size={15} width={1.9} />
+          {t('qr.download')}
+        </button>
         <div className="qr-full-hint">{t('qr.full.hint')}</div>
       </div>
 

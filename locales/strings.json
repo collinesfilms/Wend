@@ -90,6 +90,14 @@
       "en": "Link copied",
       "fr": "Lien copié"
     },
+    "toast.qr_saved": {
+      "en": "QR code saved",
+      "fr": "QR code enregistré"
+    },
+    "toast.qr_failed": {
+      "en": "Could not save the QR code",
+      "fr": "Impossible d’enregistrer le QR code"
+    },
     "toast.clipboard_blocked": {
       "en": "Your browser blocked the clipboard",
       "fr": "Votre navigateur a bloqué l’accès au presse-papiers"
@@ -325,6 +333,14 @@
     "qr.fullscreen": {
       "en": "Full screen",
       "fr": "Plein écran"
+    },
+    "qr.download": {
+      "en": "Save",
+      "fr": "Enregistrer"
+    },
+    "qr.download.aria": {
+      "en": "Save the QR code as an image",
+      "fr": "Enregistrer le QR code en image"
     },
     "list.title": {
       "en": "Links",

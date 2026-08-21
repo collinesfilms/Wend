@@ -5,6 +5,7 @@ import { dayMonth, expiryPresets, expiryToDate, type ExpiryKey } from './format'
 import { t } from './i18n'
 import * as I from './icons'
 import { draw as drawQr } from './qr'
+import { saveQr } from './qrfile'
 
 type Step = 'empty' | 'captured' | 'options' | 'result' | 'qr'
 type Division = 'pill' | 'spread'
@@ -264,6 +265,14 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
         text: ok ? t('result.copied') : t('toast.clipboard_blocked'),
       })
     }, 140)
+  }
+
+  const downloadQr = async () => {
+    if (!created) return
+    const outcome = await saveQr(created.short_url, created.slug)
+    // A share sheet says its own piece; only the silent paths need a word.
+    if (outcome === 'downloaded') onToast(t('toast.qr_saved'))
+    if (outcome === 'failed') onToast(t('toast.qr_failed'), true)
   }
 
   const showQr = () => {
@@ -602,9 +611,12 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
               </span>
             </span>
             <span className="foot">
-              <span className={`copied${copied ? ' on' : ''}`} style={copied && !copied.ok ? { color: 'var(--ink-3)' } : undefined}>
+              <span
+                className={`copied${copied ? ' on' : ''}${copied?.ok ? ' ok' : ''}`}
+                style={copied && !copied.ok ? { color: 'var(--ink-3)' } : undefined}
+              >
                 {copied?.ok && <I.Check size={12} width={2.4} />}
-                {copied?.text}
+                <span className="txt">{copied?.text}</span>
               </span>
             </span>
           </div>
@@ -651,6 +663,13 @@ export function Stage({ domains, settings, onCreated, onOpenDetail, onToast, onS
           </div>
           <div className="qr-acts">
             <button className="ra-ghost" onClick={() => setStep('result')}>{t('qr.back')}</button>
+            <button
+              className="ra-side"
+              aria-label={t('qr.download.aria')}
+              onClick={() => void downloadQr()}
+            >
+              <I.Download size={17} width={1.8} />
+            </button>
             <button className="ra-main" onClick={() => created && onShowQrFull(created)}>
               {t('qr.fullscreen')}
             </button>

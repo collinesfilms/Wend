@@ -26,7 +26,7 @@
 
   --danger:#A6503F;
   --danger-deep:#7E3527;
-  --ok:#4F7A55;
+  --ok:#4F7A55;      --ok-sheen:#9AD3A6;
   --on-accent:#FFFFFF;
 
   --shadow-s:0 1px 2px rgba(26,28,25,.05), 0 2px 6px rgba(26,28,25,.04);
@@ -52,6 +52,7 @@
     --slate:#8CA5C6;   --slate-tint:#1E242D; --slate-glow:140,165,198;
     --ochre:#C6AF66;   --ochre-tint:#2A2718; --ochre-glow:198,175,102;
     --danger:#D07E6A;  --ok:#86B18B;         --on-accent:#14160F;
+    --ok-sheen:#E4F6E7;
     --shadow-s:0 1px 2px rgba(0,0,0,.3), 0 2px 6px rgba(0,0,0,.24);
     --shadow-m:0 2px 6px rgba(0,0,0,.34), 0 10px 26px rgba(0,0,0,.4);
     --shadow-l:0 4px 12px rgba(0,0,0,.4), 0 24px 60px rgba(0,0,0,.55);
@@ -67,6 +68,7 @@
   --slate:#8CA5C6;   --slate-tint:#1E242D; --slate-glow:140,165,198;
   --ochre:#C6AF66;   --ochre-tint:#2A2718; --ochre-glow:198,175,102;
   --danger:#D07E6A;  --ok:#86B18B;         --on-accent:#14160F;
+  --ok-sheen:#E4F6E7;
   --shadow-s:0 1px 2px rgba(0,0,0,.3), 0 2px 6px rgba(0,0,0,.24);
   --shadow-m:0 2px 6px rgba(0,0,0,.34), 0 10px 26px rgba(0,0,0,.4);
   --shadow-l:0 4px 12px rgba(0,0,0,.4), 0 24px 60px rgba(0,0,0,.55);
@@ -530,6 +532,47 @@ input:focus{outline:none;}
 }
 .link-plate .copied.on{opacity:1;transform:none;}
 
+/* A light travels across the words, the way it used to across "slide to
+   unlock". The gradient is clipped to the glyphs, so it is the letters
+   themselves that brighten rather than a band drawn over them.
+
+   The geometry is exact rather than eyeballed. At 300% the image is three times
+   the box, so sliding background-position from 100% to 0% walks the bright point
+   of the gradient from half a box-width clear of the left edge to half a
+   box-width clear of the right — the pass crosses every letter and then leaves,
+   so between passes the message rests as one even green. (At 200% it fits
+   exactly edge to edge, which sounds tidier but parks the sheen on the last word
+   for the whole pause.) That range is also precisely the range over which an
+   image this size still covers the box; stray outside it and the uncovered
+   glyphs, whose fill is transparent, would simply disappear. */
+@supports ((-webkit-background-clip:text) or (background-clip:text)){
+  .link-plate .copied.on.ok .txt{
+    background-image:linear-gradient(100deg,
+      currentColor 0%, currentColor 42%,
+      var(--ok-sheen) 50%,
+      currentColor 58%, currentColor 100%);
+    background-size:300% 100%;
+    background-repeat:no-repeat;
+    -webkit-background-clip:text;background-clip:text;
+    -webkit-text-fill-color:transparent;
+    animation:copied-sheen 2.6s var(--ease-soft) 420ms infinite;
+  }
+}
+@keyframes copied-sheen{
+  0%{background-position:100% 0;}
+  /* the pass takes the first 60%; the rest is the pause before it comes round */
+  60%{background-position:0% 0;}
+  100%{background-position:0% 0;}
+}
+@media (prefers-reduced-motion:reduce){
+  /* No sweep, and above all no transparent fill left behind by an animation the
+     global reduced-motion rule has already cut short. */
+  .link-plate .copied.on.ok .txt{
+    background-image:none;
+    -webkit-text-fill-color:currentColor;
+  }
+}
+
 .result-acts{display:flex;gap:8px;margin-top:10px;}
 .result-acts button,.qr-acts button{
   height:44px;border-radius:var(--r-m);
@@ -828,6 +871,17 @@ input:focus{outline:none;}
 .qr-full-url{font-family:var(--mono);font-size:clamp(20px,5.2vw,34px);letter-spacing:-.02em;color:#6B7069;}
 .qr-full-url b{color:#14160F;font-weight:500;}
 .qr-full-hint{position:absolute;bottom:26px;font-size:12px;color:#9AA095;letter-spacing:.02em;}
+/* The full-screen view is its own white world and does not take the theme
+   tokens; these are the same greys the rest of it is drawn in. */
+.qr-full-save{
+  display:inline-flex;align-items:center;gap:8px;
+  height:44px;padding:0 22px;border-radius:999px;
+  font-size:14px;font-weight:500;
+  background:#14160F;color:#FFFFFF;
+  transition:transform var(--t-fast) var(--ease), filter var(--t-fast) var(--ease);
+}
+.qr-full-save:hover{transform:translateY(-1px);filter:brightness(1.35);}
+.qr-full-save:active{transform:translateY(0) scale(.98);}
 
 @media (max-width:520px){
   #app{padding:16px;padding-bottom:88px;}
