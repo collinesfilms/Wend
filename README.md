@@ -215,6 +215,8 @@ module par module contre une implémentation de référence.
 
 ## Développement
 
+Go 1.25 et Node 22.
+
 ```sh
 npm --prefix web ci
 npm --prefix web run build     # le binaire embarque web/dist

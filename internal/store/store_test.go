@@ -31,13 +31,13 @@ func TestNormalizeSlug(t *testing.T) {
 		want    string
 		wantErr error
 	}{
-		{"Lab-3", "lab-3", nil},           // lookups are case-insensitive
-		{" /tp-3/ ", "tp-3", nil},         // stray slashes and spaces forgiven
+		{"Lab-3", "lab-3", nil},   // lookups are case-insensitive
+		{" /tp-3/ ", "tp-3", nil}, // stray slashes and spaces forgiven
 		{"x7kq2", "x7kq2", nil},
-		{"api", "", ErrSlugReserved},      // never shadow the server's own paths
+		{"api", "", ErrSlugReserved}, // never shadow the server's own paths
 		{"sw.js", "", ErrSlugReserved},
 		{"", "", ErrSlugInvalid},
-		{"-nope", "", ErrSlugInvalid},     // must start alphanumeric
+		{"-nope", "", ErrSlugInvalid}, // must start alphanumeric
 		{"a b", "", ErrSlugInvalid},
 	}
 	for _, c := range cases {
@@ -243,5 +243,38 @@ func TestDomainWithLinksCannotBeRemoved(t *testing.T) {
 	}
 	if err := st.DeleteDomain(ctx, d.ID); err == nil {
 		t.Fatal("removing a domain that still serves links should fail")
+	}
+}
+
+func TestUnknownHostFallsBackToTheDefaultDomain(t *testing.T) {
+	st := open(t)
+	ctx := context.Background()
+	def, _ := st.DomainByHost(ctx, "go.collines.co")
+	other, _ := st.DomainByHost(ctx, "clns.li")
+
+	if _, err := st.Create(ctx, CreateLink{
+		Dest: "https://collines.co/default", Slug: "shared", DomainID: def.ID, OwnerID: "sub-1",
+	}); err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if _, err := st.Create(ctx, CreateLink{
+		Dest: "https://collines.co/other", Slug: "elsewhere", DomainID: other.ID, OwnerID: "sub-1",
+	}); err != nil {
+		t.Fatalf("create: %v", err)
+	}
+
+	// A reverse proxy that rewrites Host to its upstream address would
+	// otherwise 404 every link, for a reason invisible from the symptom.
+	got, err := st.Resolve(ctx, "localhost", "shared")
+	if err != nil {
+		t.Fatalf("unknown host did not fall back: %v", err)
+	}
+	if got.Dest != "https://collines.co/default" {
+		t.Fatalf("fell back to the wrong link: %q", got.Dest)
+	}
+
+	// Known hosts still resolve strictly: the fallback must not blur domains.
+	if _, err := st.Resolve(ctx, "go.collines.co", "elsewhere"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("a known host resolved another domain's slug: %v", err)
 	}
 }

@@ -514,12 +514,30 @@ type Target struct {
 }
 
 // Resolve looks up a slug on a host. It is the hot path: one indexed query.
+//
+// A host the server does not know falls back to the default domain. Some
+// reverse proxies rewrite Host to the upstream address, and without this every
+// link would 404 for a reason nobody would guess from the symptom. Known hosts
+// keep resolving strictly, so two domains can still carry the same slug.
 func (s *Store) Resolve(ctx context.Context, host, slug string) (Target, error) {
 	host = strings.ToLower(host)
 	if i := strings.IndexByte(host, ':'); i >= 0 {
 		host = host[:i]
 	}
 	slug = strings.ToLower(strings.Trim(slug, "/"))
+
+	var known int
+	if err := s.db.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM domains WHERE host = ?`, host).Scan(&known); err != nil {
+		return Target{}, err
+	}
+	if known == 0 {
+		d, err := s.DefaultDomain(ctx)
+		if err != nil {
+			return Target{}, ErrNotFound
+		}
+		host = d.Host
+	}
 
 	var (
 		t       Target
